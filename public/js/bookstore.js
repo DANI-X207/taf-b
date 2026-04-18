@@ -389,14 +389,7 @@
     addAdminLink();
     updateCartBadge();
     var page = pageName();
-    if (page === "home") {
-      /* Masquer les blocs catalogue (pos39 = intro, pos40 = con-A70 wrapper)
-         uniquement sur la page d'accueil — ces classes existent aussi sur d'autres pages */
-      var hide = document.querySelectorAll(".pos39, .pos40");
-      for (var i = 0; i < hide.length; i++) {
-        hide[i].style.cssText = "display:none!important;height:0!important;overflow:hidden!important;margin:0!important;padding:0!important;";
-      }
-    }
+    if (page === "home") initHome();
     if (page === "cart") initCart();
     if (page === "detail") initDetail();
     if (page === "admin" || page === "boutique") initAdmin();
