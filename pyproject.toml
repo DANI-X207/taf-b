@@ -10,4 +10,6 @@ dependencies = [
     "gunicorn>=25.3.0",
     "psycopg2-binary>=2.9.11",
     "reportlab>=4.4.10",
+    "serverless-wsgi>=3.1.0",
+    "werkzeug>=3.1.8",
 ]

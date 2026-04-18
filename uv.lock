@@ -505,6 +505,8 @@ dependencies = [
     { name = "gunicorn" },
     { name = "psycopg2-binary" },
     { name = "reportlab" },
+    { name = "serverless-wsgi" },
+    { name = "werkzeug" },
 ]
 
 [package.metadata]
@@ -515,6 +517,8 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=25.3.0" },
     { name = "psycopg2-binary", specifier = ">=2.9.11" },
     { name = "reportlab", specifier = ">=4.4.10" },
+    { name = "serverless-wsgi", specifier = ">=3.1.0" },
+    { name = "werkzeug", specifier = ">=3.1.8" },
 ]
 
 [[package]]
@@ -528,6 +532,17 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/48/57/28bfbf0a775b618b6e4d854ef8dd3f5c8988e5d614d8898703502a35f61c/reportlab-4.4.10.tar.gz", hash = "sha256:5cbbb34ac3546039d0086deb2938cdec06b12da3cdb836e813258eb33cd28487", size = 3714962, upload-time = "2026-02-12T10:45:21.325Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8a/2e/e1798b8b248e1517e74c6cdf10dd6edd485044e7edf46b5f11ffcc5a0add/reportlab-4.4.10-py3-none-any.whl", hash = "sha256:5abc815746ae2bc44e7ff25db96814f921349ca814c992c7eac3c26029bf7c24", size = 1955400, upload-time = "2026-02-12T10:45:18.828Z" },
+]
+
+[[package]]
+name = "serverless-wsgi"
+version = "3.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "werkzeug" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/5f/b0/9b3fb4001807cf82fda139ce7db29a32b2a19005d7c6a0cd0c74776b8b4a/serverless_wsgi-3.1.0-py2.py3-none-any.whl", hash = "sha256:c2584067e1c2b0e909f83b923d3ab3f19cc645133d53bf203ca249fd77e6baec", size = 10774, upload-time = "2025-06-11T05:37:14.707Z" },
 ]
 
 [[package]]

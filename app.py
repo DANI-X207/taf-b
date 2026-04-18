@@ -1,35 +1,55 @@
+"""Application Flask de la librairie Magma avec catalogue, comptes clients, commandes, administration et export du code source."""
+
 import io
+import logging
 import os
 import re
 import secrets
 import smtplib
 import sqlite3
+import zipfile
 from datetime import datetime, timedelta
 from email.message import EmailMessage
+from functools import wraps
 from html import escape
+from urllib.parse import urlparse
 
-from flask import Flask, Response, jsonify, request, send_file, send_from_directory, session
+from email_validator import EmailNotValidError, validate_email
+from flask import Flask, Response, jsonify, redirect, request, send_file, send_from_directory, session, url_for
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer, Table, TableStyle
+from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import check_password_hash, generate_password_hash
+
+logging.basicConfig(level=logging.DEBUG)
 
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET")
 if not app.secret_key:
     app.secret_key = secrets.token_hex(32)
     app.logger.warning("SESSION_SECRET is not set; using a temporary development secret.")
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+app.config.update(
+    PERMANENT_SESSION_LIFETIME=timedelta(days=int(os.environ.get("SESSION_DAYS", "7"))),
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SECURE=os.environ.get("SESSION_COOKIE_SECURE", "true").lower() != "false",
+    SESSION_COOKIE_SAMESITE="Strict",
+)
 
-DB_PATH = os.path.join(os.path.dirname(__file__), "data", "bookstore.db")
-PUBLIC_HTML = os.path.join(os.path.dirname(__file__), "public", "html")
-PUBLIC_CSS = os.path.join(os.path.dirname(__file__), "public", "css")
-PUBLIC_IMG = os.path.join(os.path.dirname(__file__), "public", "img")
-PUBLIC_JS = os.path.join(os.path.dirname(__file__), "public", "js")
+BASE_DIR = os.path.dirname(__file__)
+DB_PATH = os.path.join(BASE_DIR, "data", "bookstore.db")
+PUBLIC_HTML = os.path.join(BASE_DIR, "public", "html")
+PUBLIC_CSS = os.path.join(BASE_DIR, "public", "css")
+PUBLIC_IMG = os.path.join(BASE_DIR, "public", "img")
+PUBLIC_JS = os.path.join(BASE_DIR, "public", "js")
 
 SITE_NAME = "Librairie Magma"
 ADMIN_PASSWORD = "TAF1-FLEMME"
 ORDER_EMAIL_TO = "moussokiexauce7@gmail.com"
 CANCEL_WINDOW_MINUTES = 5
+ORDER_STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Annulée"]
 ALLOWED_DELIVERY_ZONES = [
     "Potopoto la gare",
     "Total vers Saint Exupérie",
@@ -37,6 +57,14 @@ ALLOWED_DELIVERY_ZONES = [
     "OSH",
     "CHU",
 ]
+PROTECTED_PAGES = {
+    "index.html",
+    "PAGEMOD-Accueil.html",
+    "PI_Produit.html",
+    "Mon-panier.html",
+    "Formulaire.html",
+}
+AUTH_PAGES = {"login.html", "connexion.html", "register.html", "inscription.html"}
 INJECT_SCRIPT = '<script src="/js/bookstore.js"></script></body>'
 HEAD_COMPAT_SCRIPT = """
 <script>
@@ -103,14 +131,17 @@ PAGE_TITLES = {
 
 
 def now_iso():
+    """Retourne l'horodatage UTC utilisé par les modules commande, avis et publicité."""
     return datetime.utcnow().isoformat(timespec="seconds")
 
 
 def parse_iso(value):
+    """Convertit une date ISO stockée en base SQLite en objet datetime."""
     return datetime.fromisoformat(value)
 
 
 def clean_text(value, max_len=500, required=False):
+    """Nettoie et limite les textes reçus des formulaires et des appels API."""
     text = str(value or "").strip()
     if required and not text:
         raise ValueError("Champ obligatoire manquant")
@@ -118,6 +149,7 @@ def clean_text(value, max_len=500, required=False):
 
 
 def clean_int(value, min_value=0, default=0):
+    """Convertit les valeurs numériques de formulaire avec borne minimale."""
     try:
         number = int(value)
     except (TypeError, ValueError):
@@ -125,24 +157,77 @@ def clean_int(value, min_value=0, default=0):
     return max(min_value, number)
 
 
+def clean_email(value):
+    """Valide une adresse email et renvoie sa forme normalisée."""
+    email = clean_text(value, 180, True).lower()
+    try:
+        return validate_email(email, check_deliverability=False).normalized.lower()
+    except EmailNotValidError:
+        raise ValueError("Adresse email invalide")
+
+
+def clean_password(value):
+    """Valide la robustesse minimale du mot de passe client."""
+    password = str(value or "")
+    if len(password) < 8:
+        raise ValueError("Le mot de passe doit contenir au moins 8 caractères.")
+    if not re.search(r"[A-Za-z]", password) or not re.search(r"\d", password):
+        raise ValueError("Le mot de passe doit contenir au moins une lettre et un chiffre.")
+    return password
+
+
+def clean_phone(value):
+    """Valide les numéros de téléphone utilisés pour les commandes."""
+    phone = clean_text(value, 40, True)
+    if not re.fullmatch(r"[+0-9 ()\-.]{6,40}", phone):
+        raise ValueError("Numéro de téléphone invalide")
+    return phone
+
+
+def clean_url(value, max_len=700):
+    """Valide les URLs utilisées pour les images et les publicités."""
+    url = clean_text(value, max_len)
+    if not url:
+        return ""
+    parsed = urlparse(url)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("URL invalide")
+    return url
+
+
 def get_db():
+    """Ouvre une connexion SQLite configurée pour renvoyer les lignes sous forme de dictionnaires."""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
     return conn
 
 
 def table_columns(conn, table_name):
+    """Liste les colonnes existantes pour les migrations légères SQLite."""
     return [row["name"] for row in conn.execute(f"PRAGMA table_info({table_name})").fetchall()]
 
 
 def add_column_if_missing(conn, table_name, column_name, definition):
+    """Ajoute une colonne SQLite seulement si elle n'existe pas encore."""
     if column_name not in table_columns(conn, table_name):
         conn.execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}")
 
 
 def init_db():
+    """Crée et migre les tables SQLite nécessaires aux livres, utilisateurs, commandes, avis et publicités."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_db()
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            last_login_at TEXT
+        )
+    """)
     conn.execute("""
         CREATE TABLE IF NOT EXISTS books (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -164,18 +249,25 @@ def init_db():
     conn.execute("""
         CREATE TABLE IF NOT EXISTS orders (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
             customer_name TEXT NOT NULL,
             customer_email TEXT NOT NULL,
             customer_phone TEXT NOT NULL,
             delivery_zone TEXT NOT NULL,
             delivery_address TEXT NOT NULL,
             total INTEGER NOT NULL,
-            status TEXT NOT NULL DEFAULT 'validated',
+            status TEXT NOT NULL DEFAULT 'En attente',
             email_status TEXT DEFAULT 'pending',
+            tracking_token TEXT DEFAULT '',
             created_at TEXT NOT NULL,
-            cancelled_at TEXT
+            updated_at TEXT DEFAULT '',
+            cancelled_at TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
+    add_column_if_missing(conn, "orders", "user_id", "INTEGER REFERENCES users(id)")
+    add_column_if_missing(conn, "orders", "tracking_token", "TEXT DEFAULT ''")
+    add_column_if_missing(conn, "orders", "updated_at", "TEXT DEFAULT ''")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -193,13 +285,16 @@ def init_db():
         CREATE TABLE IF NOT EXISTS reviews (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             book_id INTEGER NOT NULL,
+            user_id INTEGER,
             customer_name TEXT NOT NULL,
             rating INTEGER NOT NULL,
             comment TEXT NOT NULL,
             created_at TEXT NOT NULL,
-            FOREIGN KEY(book_id) REFERENCES books(id)
+            FOREIGN KEY(book_id) REFERENCES books(id),
+            FOREIGN KEY(user_id) REFERENCES users(id)
         )
     """)
+    add_column_if_missing(conn, "reviews", "user_id", "INTEGER REFERENCES users(id)")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS ads (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -213,49 +308,25 @@ def init_db():
 
     if conn.execute("SELECT COUNT(*) FROM books").fetchone()[0] == 0:
         books = [
-            ("L'Alchimiste", "Paulo Coelho", "Roman", 4500,
-             "Un berger andalou part à la recherche d'un trésor au pied des pyramides d'Égypte.",
-             "https://covers.openlibrary.org/b/id/8739161-L.jpg", 15, 1, "Best-seller international"),
-            ("Le Petit Prince", "Antoine de Saint-Exupéry", "Jeunesse", 3500,
-             "Un conte philosophique et poétique sous l'apparence d'un conte pour enfants.",
-             "https://covers.openlibrary.org/b/id/8226191-L.jpg", 20, 1, "Lecture scolaire et familiale"),
-            ("Sapiens", "Yuval Noah Harari", "Sciences", 6500,
-             "Une brève histoire de l'humanité, de la préhistoire à nos jours.",
-             "https://covers.openlibrary.org/b/id/8739173-L.jpg", 8, 1, "Essai historique"),
-            ("1984", "George Orwell", "Roman", 4000,
-             "Dans un État totalitaire, Big Brother surveille chaque citoyen.",
-             "https://covers.openlibrary.org/b/id/7222246-L.jpg", 12, 0, "Classique dystopique"),
-            ("Les Misérables", "Victor Hugo", "Roman", 5500,
-             "L'épopée de Jean Valjean dans la France du XIXe siècle.",
-             "https://covers.openlibrary.org/b/id/2423902-L.jpg", 6, 0, "Grand classique"),
-            ("Thinking, Fast and Slow", "Daniel Kahneman", "Développement", 5000,
-             "Deux systèmes de pensée qui guident nos jugements et décisions.",
-             "https://covers.openlibrary.org/b/id/8171393-L.jpg", 9, 1, "Psychologie cognitive"),
-            ("Atomic Habits", "James Clear", "Développement", 4800,
-             "Comment construire de bonnes habitudes et en finir avec les mauvaises.",
-             "https://covers.openlibrary.org/b/id/10309902-L.jpg", 14, 0, "Développement personnel"),
-            ("Dune", "Frank Herbert", "Science-Fiction", 5200,
-             "Une fresque épique sur la planète désert Arrakis et son précieux épice.",
-             "https://covers.openlibrary.org/b/id/8087474-L.jpg", 7, 0, "Saga culte"),
-            ("Le Comte de Monte-Cristo", "Alexandre Dumas", "Roman", 6000,
-             "La vengeance d'Edmond Dantès, injustement emprisonné au château d'If.",
-             "https://covers.openlibrary.org/b/id/8739051-L.jpg", 5, 1, "Aventure et vengeance"),
-            ("Harry Potter à l'école des sorciers", "J.K. Rowling", "Jeunesse", 3800,
-             "Un jeune garçon découvre qu'il est un sorcier et entre à Poudlard.",
-             "https://covers.openlibrary.org/b/id/10110415-L.jpg", 18, 0, "Fantaisie jeunesse"),
-            ("Homo Deus", "Yuval Noah Harari", "Sciences", 6000,
-             "Une brève histoire de l'avenir de l'humanité.",
-             "https://covers.openlibrary.org/b/id/8739174-L.jpg", 10, 0, "Prospective"),
-            ("La Ferme des Animaux", "George Orwell", "Roman", 3200,
-             "Une fable politique sur la corruption du pouvoir.",
-             "https://covers.openlibrary.org/b/id/8233027-L.jpg", 11, 0, "Satire politique"),
+            ("L'Alchimiste", "Paulo Coelho", "Roman", 4500, "Un berger andalou part à la recherche d'un trésor au pied des pyramides d'Égypte.", "https://covers.openlibrary.org/b/id/8739161-L.jpg", 15, 1, "Best-seller international"),
+            ("Le Petit Prince", "Antoine de Saint-Exupéry", "Jeunesse", 3500, "Un conte philosophique et poétique sous l'apparence d'un conte pour enfants.", "https://covers.openlibrary.org/b/id/8226191-L.jpg", 20, 1, "Lecture scolaire et familiale"),
+            ("Sapiens", "Yuval Noah Harari", "Sciences", 6500, "Une brève histoire de l'humanité, de la préhistoire à nos jours.", "https://covers.openlibrary.org/b/id/8739173-L.jpg", 8, 1, "Essai historique"),
+            ("1984", "George Orwell", "Roman", 4000, "Dans un État totalitaire, Big Brother surveille chaque citoyen.", "https://covers.openlibrary.org/b/id/7222246-L.jpg", 12, 0, "Classique dystopique"),
+            ("Les Misérables", "Victor Hugo", "Roman", 5500, "L'épopée de Jean Valjean dans la France du XIXe siècle.", "https://covers.openlibrary.org/b/id/2423902-L.jpg", 6, 0, "Grand classique"),
+            ("Thinking, Fast and Slow", "Daniel Kahneman", "Développement", 5000, "Deux systèmes de pensée qui guident nos jugements et décisions.", "https://covers.openlibrary.org/b/id/8171393-L.jpg", 9, 1, "Psychologie cognitive"),
+            ("Atomic Habits", "James Clear", "Développement", 4800, "Comment construire de bonnes habitudes et en finir avec les mauvaises.", "https://covers.openlibrary.org/b/id/10309902-L.jpg", 14, 0, "Développement personnel"),
+            ("Dune", "Frank Herbert", "Science-Fiction", 5200, "Une fresque épique sur la planète désert Arrakis et son précieux épice.", "https://covers.openlibrary.org/b/id/8087474-L.jpg", 7, 0, "Saga culte"),
+            ("Le Comte de Monte-Cristo", "Alexandre Dumas", "Roman", 6000, "La vengeance d'Edmond Dantès, injustement emprisonné au château d'If.", "https://covers.openlibrary.org/b/id/8739051-L.jpg", 5, 1, "Aventure et vengeance"),
+            ("Harry Potter à l'école des sorciers", "J.K. Rowling", "Jeunesse", 3800, "Un jeune garçon découvre qu'il est un sorcier et entre à Poudlard.", "https://covers.openlibrary.org/b/id/10110415-L.jpg", 18, 0, "Fantaisie jeunesse"),
+            ("Homo Deus", "Yuval Noah Harari", "Sciences", 6000, "Une brève histoire de l'avenir de l'humanité.", "https://covers.openlibrary.org/b/id/8739174-L.jpg", 10, 0, "Prospective"),
+            ("La Ferme des Animaux", "George Orwell", "Roman", 3200, "Une fable politique sur la corruption du pouvoir.", "https://covers.openlibrary.org/b/id/8233027-L.jpg", 11, 0, "Satire politique"),
         ]
         conn.executemany(
             """
             INSERT INTO books (titre, auteur, genre, prix, description, image, stock, featured, infos, created_at)
             VALUES (?,?,?,?,?,?,?,?,?,?)
             """,
-            [book + (now_iso(),) for book in books]
+            [book + (now_iso(),) for book in books],
         )
 
     if conn.execute("SELECT COUNT(*) FROM ads").fetchone()[0] == 0:
@@ -264,11 +335,135 @@ def init_db():
             ("Livraison ciblée", "Commandez vos livres dans la zone Potopoto la gare, Saint Exupérie, Présidence, OSH ou CHU.", "", 1, now_iso()),
         )
 
+    conn.execute("UPDATE orders SET status = 'Confirmée' WHERE status IN ('validated', 'confirmed')")
+    conn.execute("UPDATE orders SET status = 'Annulée' WHERE status = 'cancelled'")
+    conn.execute("UPDATE orders SET status = 'En attente' WHERE status NOT IN ('En attente', 'Confirmée', 'En livraison', 'Livrée', 'Annulée')")
+    conn.execute("UPDATE orders SET tracking_token = lower(hex(randomblob(16))) WHERE tracking_token IS NULL OR tracking_token = ''")
+    conn.execute("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL OR updated_at = ''")
     conn.commit()
     conn.close()
 
 
+def row_to_user(row):
+    """Transforme un utilisateur SQLite en dictionnaire public sans hash de mot de passe."""
+    if row is None:
+        return None
+    user = dict(row)
+    user.pop("password_hash", None)
+    return user
+
+
+def current_user():
+    """Retourne l'utilisateur connecté depuis la session sécurisée Flask."""
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    conn.close()
+    return row_to_user(row)
+
+
+def is_authenticated():
+    """Indique si la session appartient à un client connecté ou à l'administrateur."""
+    return bool(current_user() or require_admin())
+
+
+def json_required_user():
+    """Retourne une réponse JSON si le client doit d'abord se connecter."""
+    return jsonify({"error": "Connectez-vous ou créez un compte avant d'accéder au catalogue."}), 401
+
+
+def require_user_api(func):
+    """Protège les endpoints client qui nécessitent un compte actif."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not current_user() and not require_admin():
+            return json_required_user()
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def require_admin_api(func):
+    """Protège les endpoints réservés à l'espace administrateur."""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        if not require_admin():
+            return admin_required_response()
+        return func(*args, **kwargs)
+    return wrapper
+
+
+def login_user(user_id):
+    """Ouvre une session client persistante avec cookies HttpOnly, Secure et SameSite strict."""
+    session.clear()
+    session.permanent = True
+    session["user_id"] = int(user_id)
+    session.modified = True
+
+
+def serve_auth_page(message=""):
+    """Affiche la page de création de compte et de connexion client sans modifier les fichiers frontend importés."""
+    msg = f'<p class="error">{escape(message)}</p>' if message else ""
+    return Response(f"""<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{SITE_NAME} — Connexion client</title>
+<style>
+body{{margin:0;min-height:100vh;background:linear-gradient(135deg,#ff690c,#f59e0b 45%,#2b293a);font-family:Arial,sans-serif;color:#2b293a;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}}
+main{{width:min(980px,100%);background:rgba(255,255,255,.96);border-radius:28px;padding:28px;box-shadow:0 30px 90px rgba(0,0,0,.25);}}
+h1{{margin:0 0 8px;font-size:34px;}}
+p{{line-height:1.5;}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;margin-top:20px;}}
+.card{{background:#fff7ed;border:1px solid #fed7aa;border-radius:20px;padding:20px;}}
+input{{width:100%;padding:12px;margin:7px 0;border:1px solid #ddd;border-radius:12px;box-sizing:border-box;}}
+button,.link{{display:inline-block;background:#ff690c;color:#fff;border:0;border-radius:999px;padding:12px 18px;text-decoration:none;font-weight:700;cursor:pointer;margin-top:8px;}}
+.admin{{background:#2b293a;}}
+.error{{background:#fee4e2;color:#b42318;padding:12px;border-radius:12px;}}
+.small{{font-size:13px;color:#667085;}}
+</style>
+</head>
+<body>
+<main>
+<h1>{SITE_NAME}</h1>
+<p>Créez un compte ou connectez-vous pour accéder au catalogue, au panier et aux commandes.</p>
+{msg}
+<div class="grid">
+<section class="card">
+<h2>Créer un compte</h2>
+<form method="post" action="/auth/register">
+<input name="name" placeholder="Nom complet" required maxlength="120" autocomplete="name">
+<input name="email" type="email" placeholder="Email" required maxlength="180" autocomplete="email">
+<input name="password" type="password" placeholder="Mot de passe avec lettre et chiffre" required minlength="8" autocomplete="new-password">
+<button type="submit">Créer mon compte</button>
+</form>
+</section>
+<section class="card">
+<h2>Déjà client</h2>
+<form method="post" action="/auth/login">
+<input name="email" type="email" placeholder="Email" required maxlength="180" autocomplete="email">
+<input name="password" type="password" placeholder="Mot de passe" required autocomplete="current-password">
+<button type="submit">Me connecter</button>
+</form>
+</section>
+</div>
+<p><a class="link admin" href="/Admin.html">Connexion Admin</a> <a class="link" href="/api/source.zip">Télécharger le code source</a></p>
+<p class="small">Session sécurisée : cookie HttpOnly, Secure, SameSite strict, expiration configurable à 7 jours par défaut.</p>
+</main>
+</body>
+</html>""", mimetype="text/html")
+
+
 def serve_html(filename):
+    """Sert les pages HTML importées en conservant le frontend existant et en appliquant les protections serveur."""
+    if filename in AUTH_PAGES:
+        if is_authenticated():
+            return redirect(url_for("index"))
+        return serve_auth_page()
+    if filename in PROTECTED_PAGES and not is_authenticated():
+        return redirect(url_for("html_page", filename="login"))
     filepath = os.path.join(PUBLIC_HTML, filename)
     if not os.path.exists(filepath):
         return Response("Page non trouvée", status=404)
@@ -287,14 +482,17 @@ def serve_html(filename):
 
 
 def require_admin():
+    """Vérifie la session administrateur ouverte par le mot de passe dédié."""
     return bool(session.get("admin_authenticated"))
 
 
 def admin_required_response():
+    """Réponse JSON standard pour les accès admin refusés."""
     return jsonify({"error": "Accès administrateur requis."}), 401
 
 
 def row_to_book(row):
+    """Transforme un livre SQLite en dictionnaire API avec types numériques fiables."""
     book = dict(row)
     book["prix"] = int(book.get("prix") or 0)
     book["stock"] = int(book.get("stock") or 0)
@@ -302,16 +500,28 @@ def row_to_book(row):
     return book
 
 
+def row_to_order(row, items=None):
+    """Transforme une commande SQLite en réponse API incluant le suivi en temps réel."""
+    order = dict(row)
+    order["items"] = items or []
+    order["can_cancel"] = order["status"] in {"En attente", "Confirmée"} and datetime.utcnow() <= parse_iso(order["created_at"]) + timedelta(minutes=CANCEL_WINDOW_MINUTES)
+    order["tracking_steps"] = ORDER_STATUSES[:-1]
+    return order
+
+
 def current_cart():
+    """Lit le panier stocké dans la session client."""
     return session.get("cart", [])
 
 
 def save_cart(cart):
+    """Sauvegarde le panier dans la session sécurisée."""
     session["cart"] = cart
     session.modified = True
 
 
 def send_order_email(order, items):
+    """Envoie l'email de commande au destinataire configuré si un serveur SMTP est disponible."""
     smtp_host = os.environ.get("SMTP_HOST")
     smtp_port = int(os.environ.get("SMTP_PORT", "587"))
     smtp_user = os.environ.get("SMTP_USER")
@@ -320,11 +530,13 @@ def send_order_email(order, items):
 
     lines = [
         f"Nouvelle commande #{order['id']}",
+        f"Statut : {order['status']}",
         f"Client : {order['customer_name']}",
         f"Email : {order['customer_email']}",
         f"Téléphone : {order['customer_phone']}",
         f"Zone : {order['delivery_zone']}",
         f"Adresse : {order['delivery_address']}",
+        f"Suivi : /api/orders/{order['id']}?token={order['tracking_token']}",
         "",
         "Produits :",
     ]
@@ -356,12 +568,14 @@ def send_order_email(order, items):
 
 
 def generate_receipt_pdf(order, items):
+    """Génère le reçu PDF téléchargeable pour une commande."""
     buffer = io.BytesIO()
     document = SimpleDocTemplate(buffer, pagesize=A4, title=f"Reçu commande {order['id']}")
     styles = getSampleStyleSheet()
     story = [
         Paragraph("Librairie Magma", styles["Title"]),
         Paragraph(f"Reçu de commande #{order['id']}", styles["Heading2"]),
+        Paragraph(f"Statut : {escape(order['status'])}", styles["Normal"]),
         Paragraph(f"Date : {order['created_at']}", styles["Normal"]),
         Spacer(1, 12),
         Paragraph("Client", styles["Heading3"]),
@@ -391,38 +605,156 @@ def generate_receipt_pdf(order, items):
     return buffer
 
 
+def user_can_access_order(order):
+    """Contrôle qu'une commande appartient au client connecté ou dispose du jeton de suivi."""
+    if require_admin():
+        return True
+    user = current_user()
+    token = request.args.get("token") or request.form.get("token")
+    if token and secrets.compare_digest(str(token), str(order["tracking_token"] or "")):
+        return True
+    return bool(user and order["user_id"] and int(order["user_id"]) == int(user["id"]))
+
+
 @app.route("/")
 def index():
+    """Page d'accueil protégée par compte client."""
     return serve_html("index.html")
+
+
+@app.route("/favicon.ico")
+def favicon():
+    """Évite les erreurs navigateur pour l'icône du site quand aucun favicon importé n'existe."""
+    return Response("", status=204)
+
+
+@app.route("/auth/register", methods=["POST"])
+def auth_register():
+    """Crée un compte client avec mot de passe hashé puis connecte l'utilisateur."""
+    data = request.get_json(silent=True) or request.form
+    try:
+        name = clean_text(data.get("name") or data.get("username"), 120, True)
+        email = clean_email(data.get("email"))
+        password = clean_password(data.get("password"))
+    except ValueError as exc:
+        if request.is_json:
+            return jsonify({"error": str(exc)}), 400
+        return serve_auth_page(str(exc)), 400
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO users (name, email, password_hash, created_at) VALUES (?,?,?,?)",
+            (name, email, generate_password_hash(password), now_iso()),
+        )
+        conn.commit()
+        user_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    except sqlite3.IntegrityError:
+        conn.close()
+        message = "Un compte existe déjà avec cet email. Connectez-vous directement."
+        if request.is_json:
+            return jsonify({"error": message}), 409
+        return serve_auth_page(message), 409
+    conn.close()
+    login_user(user_id)
+    if request.is_json:
+        return jsonify({"success": True, "user": current_user()}), 201
+    return redirect(url_for("index"))
+
+
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
+    """Connecte un client existant après vérification du hash de mot de passe."""
+    data = request.get_json(silent=True) or request.form
+    try:
+        email = clean_email(data.get("email"))
+        password = str(data.get("password") or "")
+    except ValueError as exc:
+        if request.is_json:
+            return jsonify({"error": str(exc)}), 400
+        return serve_auth_page(str(exc)), 400
+    conn = get_db()
+    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    if row is None or not check_password_hash(row["password_hash"], password):
+        conn.close()
+        message = "Email ou mot de passe incorrect."
+        if request.is_json:
+            return jsonify({"error": message}), 401
+        return serve_auth_page(message), 401
+    conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now_iso(), row["id"]))
+    conn.commit()
+    conn.close()
+    login_user(row["id"])
+    if request.is_json:
+        return jsonify({"success": True, "user": current_user()})
+    return redirect(url_for("index"))
+
+
+@app.route("/auth/logout", methods=["POST", "GET"])
+def auth_logout():
+    """Ferme la session client ou administrateur."""
+    session.clear()
+    if request.is_json:
+        return jsonify({"success": True})
+    return redirect(url_for("html_page", filename="login"))
+
+
+@app.route("/api/auth/status", methods=["GET"])
+def auth_status():
+    """Retourne l'état de connexion client/admin."""
+    return jsonify({"authenticated": is_authenticated(), "user": current_user(), "admin": require_admin()})
+
+
+@app.route("/api/auth/register", methods=["POST"])
+def api_auth_register():
+    """Alias JSON de création de compte client."""
+    return auth_register()
+
+
+@app.route("/api/auth/login", methods=["POST"])
+def api_auth_login():
+    """Alias JSON de connexion client."""
+    return auth_login()
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def api_auth_logout():
+    """Alias JSON de déconnexion."""
+    return auth_logout()
 
 
 @app.route("/<path:filename>.html")
 def html_page(filename):
+    """Route générique pour servir les pages HTML importées."""
     return serve_html(filename + ".html")
 
 
 @app.route("/<filename>.css")
 def css_file(filename):
+    """Sert les feuilles de style importées sans modification."""
     return send_from_directory(PUBLIC_CSS, filename + ".css")
 
 
 @app.route("/ext/<path:filename>")
 def ext_file(filename):
+    """Sert les images historiques référencées par les pages WebDev importées."""
     return send_from_directory(PUBLIC_IMG, filename)
 
 
 @app.route("/img/<path:filename>")
 def img_file(filename):
+    """Sert les images du catalogue et des pages importées."""
     return send_from_directory(PUBLIC_IMG, filename)
 
 
 @app.route("/js/<path:filename>")
 def js_file(filename):
+    """Sert les scripts frontend existants sans modification."""
     return send_from_directory(PUBLIC_JS, filename)
 
 
 @app.route("/res/<path:filename>")
 def res_file(filename):
+    """Sert les ressources WebDev nécessaires et neutralise les scripts manquants."""
     res_dir = os.path.join(PUBLIC_HTML, "res")
     if os.path.exists(os.path.join(res_dir, filename)):
         return send_from_directory(res_dir, filename)
@@ -431,17 +763,10 @@ def res_file(filename):
     return Response("", status=404)
 
 
-@app.route("/<path:filename>")
-def static_file(filename):
-    for base in [PUBLIC_HTML, PUBLIC_CSS, PUBLIC_IMG, PUBLIC_JS]:
-        fullpath = os.path.join(base, filename)
-        if os.path.exists(fullpath):
-            return send_from_directory(base, filename)
-    return Response("Fichier non trouvé", status=404)
-
-
 @app.route("/api/books", methods=["GET"])
+@require_user_api
 def get_books():
+    """Liste les livres du catalogue avec recherche et filtre par catégorie."""
     genre = clean_text(request.args.get("genre", ""), 80)
     search = clean_text(request.args.get("search", ""), 120)
     conn = get_db()
@@ -461,7 +786,9 @@ def get_books():
 
 
 @app.route("/api/books/featured", methods=["GET"])
+@require_user_api
 def get_featured():
+    """Liste les livres mis en avant pour la page d'accueil."""
     conn = get_db()
     books = [row_to_book(row) for row in conn.execute("SELECT * FROM books WHERE featured = 1 ORDER BY id DESC").fetchall()]
     conn.close()
@@ -469,7 +796,9 @@ def get_featured():
 
 
 @app.route("/api/books/<int:book_id>", methods=["GET"])
+@require_user_api
 def get_book(book_id):
+    """Retourne le détail d'un livre."""
     conn = get_db()
     row = conn.execute("SELECT * FROM books WHERE id = ?", (book_id,)).fetchone()
     conn.close()
@@ -479,9 +808,9 @@ def get_book(book_id):
 
 
 @app.route("/api/books", methods=["POST"])
+@require_admin_api
 def add_book():
-    if not require_admin():
-        return admin_required_response()
+    """Ajoute un livre depuis l'espace administrateur."""
     data = request.get_json(silent=True) or {}
     try:
         titre = clean_text(data.get("titre"), 160, True)
@@ -490,6 +819,7 @@ def add_book():
         prix = clean_int(data.get("prix"), 1)
         if prix <= 0:
             raise ValueError("Prix invalide")
+        image = clean_url(data.get("image"), 700)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -499,18 +829,7 @@ def add_book():
         INSERT INTO books (titre, auteur, genre, prix, description, image, stock, featured, infos, created_at)
         VALUES (?,?,?,?,?,?,?,?,?,?)
         """,
-        (
-            titre,
-            auteur,
-            genre,
-            prix,
-            clean_text(data.get("description"), 1200),
-            clean_text(data.get("image"), 700),
-            clean_int(data.get("stock"), 0, 10),
-            1 if data.get("featured") else 0,
-            clean_text(data.get("infos"), 1000),
-            now_iso(),
-        ),
+        (titre, auteur, genre, prix, clean_text(data.get("description"), 1200), image, clean_int(data.get("stock"), 0, 10), 1 if data.get("featured") else 0, clean_text(data.get("infos"), 1000), now_iso()),
     )
     conn.commit()
     new_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
@@ -520,9 +839,9 @@ def add_book():
 
 
 @app.route("/api/books/<int:book_id>", methods=["PUT"])
+@require_admin_api
 def update_book(book_id):
-    if not require_admin():
-        return admin_required_response()
+    """Modifie un livre existant depuis l'espace administrateur."""
     data = request.get_json(silent=True) or {}
     try:
         titre = clean_text(data.get("titre"), 160, True)
@@ -531,6 +850,7 @@ def update_book(book_id):
         prix = clean_int(data.get("prix"), 1)
         if prix <= 0:
             raise ValueError("Prix invalide")
+        image = clean_url(data.get("image"), 700)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
@@ -541,18 +861,7 @@ def update_book(book_id):
         SET titre = ?, auteur = ?, genre = ?, prix = ?, description = ?, image = ?, stock = ?, featured = ?, infos = ?
         WHERE id = ?
         """,
-        (
-            titre,
-            auteur,
-            genre,
-            prix,
-            clean_text(data.get("description"), 1200),
-            clean_text(data.get("image"), 700),
-            clean_int(data.get("stock"), 0, 10),
-            1 if data.get("featured") else 0,
-            clean_text(data.get("infos"), 1000),
-            book_id,
-        ),
+        (titre, auteur, genre, prix, clean_text(data.get("description"), 1200), image, clean_int(data.get("stock"), 0, 10), 1 if data.get("featured") else 0, clean_text(data.get("infos"), 1000), book_id),
     )
     conn.commit()
     if result.rowcount == 0:
@@ -564,9 +873,9 @@ def update_book(book_id):
 
 
 @app.route("/api/books/<int:book_id>", methods=["DELETE"])
+@require_admin_api
 def delete_book(book_id):
-    if not require_admin():
-        return admin_required_response()
+    """Supprime un livre depuis l'espace administrateur."""
     conn = get_db()
     conn.execute("DELETE FROM books WHERE id = ?", (book_id,))
     conn.commit()
@@ -575,12 +884,16 @@ def delete_book(book_id):
 
 
 @app.route("/api/cart", methods=["GET"])
+@require_user_api
 def get_cart():
+    """Retourne le panier du client connecté."""
     return jsonify(current_cart())
 
 
 @app.route("/api/cart/add", methods=["POST"])
+@require_user_api
 def add_to_cart():
+    """Ajoute un livre disponible au panier."""
     data = request.get_json(silent=True) or {}
     book_id = clean_int(data.get("id"), 1)
     qty = clean_int(data.get("qty"), 1, 1)
@@ -604,20 +917,26 @@ def add_to_cart():
 
 
 @app.route("/api/cart/remove/<int:book_id>", methods=["DELETE"])
+@require_user_api
 def remove_from_cart(book_id):
+    """Retire un livre du panier."""
     cart = [item for item in current_cart() if item["id"] != book_id]
     save_cart(cart)
     return jsonify({"success": True, "cart": cart})
 
 
 @app.route("/api/cart/clear", methods=["DELETE"])
+@require_user_api
 def clear_cart():
+    """Vide le panier client."""
     save_cart([])
     return jsonify({"success": True})
 
 
 @app.route("/api/genres", methods=["GET"])
+@require_user_api
 def get_genres():
+    """Liste les catégories disponibles dans le catalogue."""
     conn = get_db()
     genres = [row[0] for row in conn.execute("SELECT DISTINCT genre FROM books ORDER BY genre").fetchall()]
     conn.close()
@@ -625,24 +944,29 @@ def get_genres():
 
 
 @app.route("/api/delivery-zones", methods=["GET"])
+@require_user_api
 def get_delivery_zones():
+    """Retourne les zones de livraison autorisées."""
     return jsonify(ALLOWED_DELIVERY_ZONES)
 
 
 @app.route("/api/orders", methods=["POST"])
+@require_user_api
 def create_order():
+    """Crée une commande, bloque les zones hors livraison, envoie l'email et prépare le reçu PDF."""
     cart = current_cart()
     if not cart:
         return jsonify({"error": "Votre panier est vide."}), 400
     data = request.get_json(silent=True) or {}
+    user = current_user()
     try:
-        customer_name = clean_text(data.get("customer_name"), 140, True)
-        customer_email = clean_text(data.get("customer_email"), 180, True)
-        customer_phone = clean_text(data.get("customer_phone"), 40, True)
+        customer_name = clean_text(data.get("customer_name") or (user or {}).get("name"), 140, True)
+        customer_email = clean_email(data.get("customer_email") or (user or {}).get("email"))
+        customer_phone = clean_phone(data.get("customer_phone"))
         delivery_zone = clean_text(data.get("delivery_zone"), 120, True)
         delivery_address = clean_text(data.get("delivery_address"), 260, True)
-    except ValueError:
-        return jsonify({"error": "Merci de remplir toutes les informations client."}), 400
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     if delivery_zone not in ALLOWED_DELIVERY_ZONES:
         return jsonify({"error": "Livraison impossible : cette adresse est hors zone. Zones autorisées : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU."}), 400
@@ -664,12 +988,13 @@ def create_order():
         total += book["prix"] * qty
 
     created_at = now_iso()
+    tracking_token = secrets.token_urlsafe(24)
     conn.execute(
         """
-        INSERT INTO orders (customer_name, customer_email, customer_phone, delivery_zone, delivery_address, total, status, email_status, created_at)
-        VALUES (?,?,?,?,?,?,?,?,?)
+        INSERT INTO orders (user_id, customer_name, customer_email, customer_phone, delivery_zone, delivery_address, total, status, email_status, tracking_token, created_at, updated_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
         """,
-        (customer_name, customer_email, customer_phone, delivery_zone, delivery_address, total, "validated", "pending", created_at),
+        ((user or {}).get("id"), customer_name, customer_email, customer_phone, delivery_zone, delivery_address, total, "En attente", "pending", tracking_token, created_at, created_at),
     )
     order_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
     for item in valid_items:
@@ -686,33 +1011,38 @@ def create_order():
     order = dict(conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone())
     conn.close()
     save_cart([])
-    return jsonify({"success": True, "order": order, "receipt_url": f"/api/orders/{order_id}/receipt.pdf", "cancel_until": (parse_iso(created_at) + timedelta(minutes=CANCEL_WINDOW_MINUTES)).isoformat(timespec="seconds")}), 201
+    return jsonify({"success": True, "order": order, "receipt_url": f"/api/orders/{order_id}/receipt.pdf", "tracking_url": f"/api/orders/{order_id}?token={tracking_token}", "cancel_until": (parse_iso(created_at) + timedelta(minutes=CANCEL_WINDOW_MINUTES)).isoformat(timespec="seconds")}), 201
 
 
 @app.route("/api/orders/<int:order_id>", methods=["GET"])
 def get_order(order_id):
+    """Retourne le suivi temps réel d'une commande avec contrôle propriétaire ou jeton."""
     conn = get_db()
     order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
     if not order:
         conn.close()
         return jsonify({"error": "Commande non trouvée"}), 404
+    if not user_can_access_order(order):
+        conn.close()
+        return jsonify({"error": "Accès à cette commande refusé."}), 403
     items = [dict(row) for row in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,)).fetchall()]
     conn.close()
-    order_data = dict(order)
-    order_data["items"] = items
-    order_data["can_cancel"] = order_data["status"] == "validated" and datetime.utcnow() <= parse_iso(order_data["created_at"]) + timedelta(minutes=CANCEL_WINDOW_MINUTES)
-    return jsonify(order_data)
+    return jsonify(row_to_order(order, items))
 
 
 @app.route("/api/orders/<int:order_id>/cancel", methods=["POST"])
 def cancel_order(order_id):
+    """Annule une commande dans les 5 minutes et restaure les stocks."""
     conn = get_db()
     order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
     if not order:
         conn.close()
         return jsonify({"error": "Commande non trouvée"}), 404
+    if not user_can_access_order(order):
+        conn.close()
+        return jsonify({"error": "Accès à cette commande refusé."}), 403
     order_data = dict(order)
-    if order_data["status"] == "cancelled":
+    if order_data["status"] == "Annulée":
         conn.close()
         return jsonify({"error": "Cette commande est déjà annulée."}), 400
     if datetime.utcnow() > parse_iso(order_data["created_at"]) + timedelta(minutes=CANCEL_WINDOW_MINUTES):
@@ -722,19 +1052,23 @@ def cancel_order(order_id):
     for item in items:
         if item["book_id"]:
             conn.execute("UPDATE books SET stock = stock + ? WHERE id = ?", (item["qty"], item["book_id"]))
-    conn.execute("UPDATE orders SET status = ?, cancelled_at = ? WHERE id = ?", ("cancelled", now_iso(), order_id))
+    conn.execute("UPDATE orders SET status = ?, cancelled_at = ?, updated_at = ? WHERE id = ?", ("Annulée", now_iso(), now_iso(), order_id))
     conn.commit()
     conn.close()
-    return jsonify({"success": True, "status": "cancelled"})
+    return jsonify({"success": True, "status": "Annulée"})
 
 
 @app.route("/api/orders/<int:order_id>/receipt.pdf", methods=["GET"])
 def download_receipt(order_id):
+    """Télécharge le reçu PDF d'une commande autorisée."""
     conn = get_db()
     order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
     if not order:
         conn.close()
         return jsonify({"error": "Commande non trouvée"}), 404
+    if not user_can_access_order(order):
+        conn.close()
+        return jsonify({"error": "Accès à cette commande refusé."}), 403
     items = [dict(row) for row in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,)).fetchall()]
     conn.close()
     pdf = generate_receipt_pdf(dict(order), items)
@@ -742,12 +1076,15 @@ def download_receipt(order_id):
 
 
 @app.route("/api/reviews", methods=["POST"])
+@require_user_api
 def add_review():
+    """Ajoute un avis client noté de 1 à 5 étoiles."""
     data = request.get_json(silent=True) or {}
     book_id = clean_int(data.get("book_id"), 1)
     rating = min(clean_int(data.get("rating"), 1, 5), 5)
+    user = current_user()
     try:
-        customer_name = clean_text(data.get("customer_name"), 120, True)
+        customer_name = clean_text(data.get("customer_name") or (user or {}).get("name"), 120, True)
         comment = clean_text(data.get("comment"), 800, True)
     except ValueError:
         return jsonify({"error": "Nom et commentaire obligatoires."}), 400
@@ -755,7 +1092,7 @@ def add_review():
     if not conn.execute("SELECT id FROM books WHERE id = ?", (book_id,)).fetchone():
         conn.close()
         return jsonify({"error": "Livre non trouvé"}), 404
-    conn.execute("INSERT INTO reviews (book_id, customer_name, rating, comment, created_at) VALUES (?,?,?,?,?)", (book_id, customer_name, rating, comment, now_iso()))
+    conn.execute("INSERT INTO reviews (book_id, user_id, customer_name, rating, comment, created_at) VALUES (?,?,?,?,?,?)", (book_id, (user or {}).get("id"), customer_name, rating, comment, now_iso()))
     conn.commit()
     review = dict(conn.execute("SELECT * FROM reviews WHERE id = last_insert_rowid()").fetchone())
     conn.close()
@@ -763,7 +1100,9 @@ def add_review():
 
 
 @app.route("/api/books/<int:book_id>/reviews", methods=["GET"])
+@require_user_api
 def get_reviews(book_id):
+    """Liste les avis clients d'un livre."""
     conn = get_db()
     reviews = [dict(row) for row in conn.execute("SELECT * FROM reviews WHERE book_id = ? ORDER BY id DESC", (book_id,)).fetchall()]
     conn.close()
@@ -772,6 +1111,7 @@ def get_reviews(book_id):
 
 @app.route("/api/ads", methods=["GET"])
 def get_ads():
+    """Liste les publicités actives visibles par les visiteurs."""
     conn = get_db()
     ads = [dict(row) for row in conn.execute("SELECT * FROM ads WHERE active = 1 ORDER BY id DESC").fetchall()]
     conn.close()
@@ -780,13 +1120,17 @@ def get_ads():
 
 @app.route("/api/admin/status", methods=["GET"])
 def admin_status():
+    """Retourne l'état de connexion administrateur."""
     return jsonify({"authenticated": require_admin()})
 
 
 @app.route("/api/admin/login", methods=["POST"])
 def admin_login():
+    """Connecte l'administrateur avec le mot de passe dédié."""
     data = request.get_json(silent=True) or {}
-    if data.get("password") == ADMIN_PASSWORD:
+    if secrets.compare_digest(str(data.get("password") or ""), ADMIN_PASSWORD):
+        session.clear()
+        session.permanent = True
         session["admin_authenticated"] = True
         return jsonify({"success": True})
     return jsonify({"error": "Mot de passe administrateur incorrect."}), 401
@@ -794,14 +1138,49 @@ def admin_login():
 
 @app.route("/api/admin/logout", methods=["POST"])
 def admin_logout():
+    """Déconnecte l'administrateur."""
     session.pop("admin_authenticated", None)
     return jsonify({"success": True})
 
 
+@app.route("/api/admin/orders", methods=["GET"])
+@require_admin_api
+def admin_get_orders():
+    """Liste toutes les commandes pour l'espace administrateur."""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM orders ORDER BY id DESC").fetchall()
+    orders = []
+    for row in rows:
+        items = [dict(item) for item in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (row["id"],)).fetchall()]
+        orders.append(row_to_order(row, items))
+    conn.close()
+    return jsonify(orders)
+
+
+@app.route("/api/admin/orders/<int:order_id>/status", methods=["PUT", "POST"])
+@require_admin_api
+def admin_update_order_status(order_id):
+    """Met à jour le statut de suivi d'une commande."""
+    data = request.get_json(silent=True) or {}
+    status = clean_text(data.get("status"), 40, True)
+    if status not in ORDER_STATUSES:
+        return jsonify({"error": "Statut invalide. Utilisez : En attente, Confirmée, En livraison, Livrée."}), 400
+    conn = get_db()
+    result = conn.execute("UPDATE orders SET status = ?, updated_at = ? WHERE id = ?", (status, now_iso(), order_id))
+    conn.commit()
+    if result.rowcount == 0:
+        conn.close()
+        return jsonify({"error": "Commande non trouvée"}), 404
+    order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    items = [dict(item) for item in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,)).fetchall()]
+    conn.close()
+    return jsonify(row_to_order(order, items))
+
+
 @app.route("/api/admin/ads", methods=["GET"])
+@require_admin_api
 def admin_get_ads():
-    if not require_admin():
-        return admin_required_response()
+    """Liste toutes les publicités pour l'espace administrateur."""
     conn = get_db()
     ads = [dict(row) for row in conn.execute("SELECT * FROM ads ORDER BY id DESC").fetchall()]
     conn.close()
@@ -809,17 +1188,18 @@ def admin_get_ads():
 
 
 @app.route("/api/admin/ads", methods=["POST"])
+@require_admin_api
 def admin_add_ad():
-    if not require_admin():
-        return admin_required_response()
+    """Ajoute une publicité depuis l'espace administrateur."""
     data = request.get_json(silent=True) or {}
     try:
         title = clean_text(data.get("title"), 160, True)
         message = clean_text(data.get("message"), 500, True)
-    except ValueError:
-        return jsonify({"error": "Titre et message obligatoires."}), 400
+        link = clean_url(data.get("link"), 500)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     conn = get_db()
-    conn.execute("INSERT INTO ads (title, message, link, active, created_at) VALUES (?,?,?,?,?)", (title, message, clean_text(data.get("link"), 500), 1 if data.get("active", True) else 0, now_iso()))
+    conn.execute("INSERT INTO ads (title, message, link, active, created_at) VALUES (?,?,?,?,?)", (title, message, link, 1 if data.get("active", True) else 0, now_iso()))
     conn.commit()
     ad = dict(conn.execute("SELECT * FROM ads WHERE id = last_insert_rowid()").fetchone())
     conn.close()
@@ -827,14 +1207,53 @@ def admin_add_ad():
 
 
 @app.route("/api/admin/ads/<int:ad_id>", methods=["DELETE"])
+@require_admin_api
 def admin_delete_ad(ad_id):
-    if not require_admin():
-        return admin_required_response()
+    """Supprime une publicité depuis l'espace administrateur."""
     conn = get_db()
     conn.execute("DELETE FROM ads WHERE id = ?", (ad_id,))
     conn.commit()
     conn.close()
     return jsonify({"success": True})
+
+
+@app.route("/api/source.zip", methods=["GET"])
+def download_source_zip():
+    """Génère un ZIP téléchargeable du code source modifié, sans cache ni base locale."""
+    if not is_authenticated():
+        return redirect(url_for("html_page", filename="login"))
+    excluded_dirs = {".git", ".cache", ".pythonlibs", "__pycache__", ".local/state"}
+    excluded_files = {"data/bookstore.db"}
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for root, dirs, files in os.walk(BASE_DIR):
+            rel_root = os.path.relpath(root, BASE_DIR)
+            dirs[:] = [d for d in dirs if os.path.join(rel_root, d).strip("./") not in excluded_dirs and d not in excluded_dirs]
+            for filename in files:
+                full_path = os.path.join(root, filename)
+                rel_path = os.path.relpath(full_path, BASE_DIR)
+                normalized = rel_path.replace(os.sep, "/")
+                if normalized in excluded_files or normalized.endswith(".pyc") or normalized.startswith(".cache/") or normalized.startswith(".git/"):
+                    continue
+                archive.write(full_path, normalized)
+    buffer.seek(0)
+    return send_file(buffer, mimetype="application/zip", as_attachment=True, download_name="librairie-magma-source.zip")
+
+
+@app.route("/download-source.zip", methods=["GET"])
+def download_source_zip_alias():
+    """Alias lisible pour télécharger le code source complet."""
+    return download_source_zip()
+
+
+@app.route("/<path:filename>")
+def static_file(filename):
+    """Sert les fichiers statiques importés restants après les routes applicatives."""
+    for base in [PUBLIC_HTML, PUBLIC_CSS, PUBLIC_IMG, PUBLIC_JS]:
+        fullpath = os.path.join(base, filename)
+        if os.path.exists(fullpath):
+            return send_from_directory(base, filename)
+    return Response("Fichier non trouvé", status=404)
 
 
 init_db()
