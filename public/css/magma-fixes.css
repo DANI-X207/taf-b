@@ -1,0 +1,207 @@
+/* =============================================================
+   Magma – Correctifs de mise en page
+   Ne modifie pas les couleurs, uniquement l'agencement.
+   ============================================================= */
+
+/* ── 1. Dropdown de navigation : z-index et overflow ────────────── */
+nav.wbMenuMain,
+.wbMenuMain,
+.wbMenuHorizontal,
+[id^="A79"], [id^="A80"], [id^="A89"] {
+  overflow: visible !important;
+  position: relative;
+  z-index: 200;
+}
+
+/* Les conteneurs directs du nav ont overflow:hidden par défaut */
+.clearfix.pos10,
+.clearfix.pos11,
+.clearfix.pos7,
+.clearfix.pos22,
+.clearfix.pos23,
+.clearfix.pos18,
+.clearfix.pos19,
+.clearfix.pos20 {
+  overflow: visible !important;
+}
+
+/* S'assurer que le sous-menu dépasse bien au-dessus de tout */
+.WDSousMenu {
+  z-index: 9999 !important;
+  background: #fff !important;
+  box-shadow: 0 4px 16px rgba(0,0,0,.18) !important;
+}
+
+/* ── 2. Images WEBDEV (wbHnImg) : afficher sans JS ──────────────── */
+.wbHnImg {
+  opacity: 1 !important;
+}
+.wbHnImg img {
+  opacity: 1 !important;
+  background: #e8e8e8;
+}
+
+/* ── 3. Conteneurs du catalogue de livres ───────────────────────── */
+#con-A70,
+#con-A90,
+#con-A73 {
+  overflow: visible !important;
+}
+
+/* Masquer les lignes de template WEBDEV non résolues */
+#con-A70 > table[id*="A70_["],
+#con-A90 > table[id*="A90_["],
+#con-A73 > table[id*="A73_["] {
+  display: none !important;
+}
+
+/* Boîte de recherche / outils catalogue ─────────────────────────── */
+#magma-catalog-tools {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 10px 8px 4px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+#magma-catalog-tools input,
+#magma-catalog-tools select {
+  box-sizing: border-box;
+}
+
+/* Liste de livres ─────────────────────────────────────────────────── */
+#magma-book-list {
+  display: flex !important;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 8px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+/* Éviter que les cartes flottantes créent un grand espace vide */
+#con-A70::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+/* ── 4. Section promotionnelle "Les bonnes affaires" (A28) ──────── */
+#A28, #A28 > tbody > tr > td {
+  overflow: visible !important;
+}
+
+/* ── 5. Sections "À la recherche de nouveauté" (A60) et
+        "Ne manquez plus aucune offre" (A61) ──────────────────────── */
+#A60, #A61 {
+  overflow: visible !important;
+  height: auto !important;
+  min-height: 200px;
+}
+
+#A61 td,
+#A61 table {
+  overflow: visible !important;
+}
+
+/* Le bouton "S'inscrire" est en position absolue ; s'assurer
+   que son parent n'est pas overflow:hidden ────────────────────── */
+.pos112,
+.pos113,
+.pos114,
+.pos115,
+.clearfix.pos112,
+.clearfix.pos113 {
+  overflow: visible !important;
+}
+
+/* ── 6. Section "Soyez à la mode" (A55) avec boutons ───────────── */
+#A55 { overflow: visible !important; }
+.pos101, .pos102, .pos103, .pos104, .pos105 {
+  overflow: visible !important;
+}
+
+/* Boutons Connexion / Inscription : alignement côte à côte ─────── */
+#bzA58, #bzA59 {
+  display: inline-table !important;
+  vertical-align: middle;
+}
+.pos104, .pos105 {
+  display: inline-block !important;
+}
+
+/* ── 7. Pied de page (A53) – colonnes plus larges ──────────────── */
+#A53 {
+  overflow: visible !important;
+}
+
+/* Les cellules du footer sont trop étroites : laisser le texte
+   s'enrouler et élargir les colonnes au minimum ──────────────── */
+#A53 td,
+#A67, #A68, #A69 {
+  white-space: normal !important;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  vertical-align: top !important;
+}
+
+/* Conteneurs des colonnes footer ────────────────────────────────── */
+.pos119, .pos120, .pos121, .pos122, .pos123, .pos124 {
+  min-width: 130px !important;
+  overflow: visible !important;
+}
+
+/* ── 8. Slider / carrousel (A6) – afficher même sans images ─────── */
+#A6, #A6_1, #A6_2, #A6_3 {
+  overflow: hidden !important;
+  min-height: 80px;
+}
+
+/* ── 9. Images de catégories (dzA33–dzA46) ──────────────────────── */
+.dzA33, .dzA34, .dzA35, .dzA36,
+.dzA43, .dzA44, .dzA45, .dzA46 {
+  overflow: hidden !important;
+  background: #e8e8e8;
+}
+
+/* ── 10. Conteneur global : pas de débordement horizontal ────────── */
+#page {
+  overflow-x: hidden !important;
+}
+
+/* ── 11. Espaces vides causés par le clearfix de divs flottantes ─── */
+[id^="con-A"]::after {
+  content: "";
+  display: block;
+  clear: both;
+}
+
+/* ── 12. Responsive – correctifs pour petits écrans ─────────────── */
+@media only screen and (max-width: 900px) {
+  /* Footer : empiler les colonnes */
+  .pos119, .pos120, .pos121, .pos122 {
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    float: none !important;
+  }
+
+  /* Sections côte à côte : passer en bloc */
+  .pos106, .pos107, .pos108,
+  .pos112, .pos113 {
+    display: block !important;
+    width: 100% !important;
+    float: none !important;
+  }
+
+  /* Barre de navigation secondaire : flex wrap */
+  .wbMenuHorizontal > ul.WDOngletMain {
+    flex-wrap: wrap !important;
+  }
+
+  /* Catalogue */
+  #magma-book-list {
+    justify-content: center;
+  }
+}

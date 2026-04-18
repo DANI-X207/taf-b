@@ -147,19 +147,24 @@
 
   function initHome() {
     var container = ensureCatalogContainer();
-    var list = document.getElementById("magma-book-list") || container;
+
     var tools = document.getElementById("magma-catalog-tools");
     if (!tools) {
       tools = document.createElement("div");
       tools.id = "magma-catalog-tools";
-      tools.style.cssText = "margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap;";
-      if (container.parentNode) {
-        container.parentNode.insertBefore(tools, container);
-      } else {
-        document.body.insertBefore(tools, document.body.firstChild);
-      }
+      tools.style.cssText = "display:flex;gap:10px;flex-wrap:wrap;padding:10px 8px 4px;box-sizing:border-box;width:100%;";
+      container.insertBefore(tools, container.firstChild);
     }
-    tools.innerHTML = '<input id="magma-search" placeholder="Rechercher un livre ou auteur" style="flex:1;min-width:220px;padding:11px;border:1px solid #ddd;border-radius:12px;"> <select id="magma-genre" style="padding:11px;border:1px solid #ddd;border-radius:12px;"><option value="">Toutes les catégories</option></select>';
+
+    var list = document.getElementById("magma-book-list");
+    if (!list) {
+      list = document.createElement("div");
+      list.id = "magma-book-list";
+      list.style.cssText = "display:flex;flex-wrap:wrap;gap:12px;padding:8px;box-sizing:border-box;width:100%;";
+      container.appendChild(list);
+    }
+
+    tools.innerHTML = '<input id="magma-search" placeholder="Rechercher un livre ou auteur" style="flex:1;min-width:220px;padding:11px;border:1px solid #ddd;border-radius:12px;box-sizing:border-box;"> <select id="magma-genre" style="padding:11px;border:1px solid #ddd;border-radius:12px;"><option value="">Toutes les catégories</option></select>';
 
     function load() {
       var q = document.getElementById("magma-search").value.trim();

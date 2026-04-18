@@ -476,6 +476,8 @@ def serve_html(filename):
     content = re.sub(r"(>)([^<]*)Mayombe([^<]*<)", lambda m: m.group(1) + m.group(2) + SITE_NAME + m.group(3), content)
     if "window.clWDUtil" not in content:
         content = content.replace("</head>", HEAD_COMPAT_SCRIPT, 1)
+    if "magma-fixes.css" not in content:
+        content = content.replace("</head>", '<link rel="stylesheet" type="text/css" href="/magma-fixes.css"></head>', 1)
     if "/js/bookstore.js" not in content:
         content = content.replace("</body>", INJECT_SCRIPT, 1)
     return Response(content, mimetype="text/html")
