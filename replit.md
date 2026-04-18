@@ -1,31 +1,52 @@
-# Mayombe
+# Mayombe — Librairie en Ligne
 
-## Project Overview
-Mayombe is a static e-commerce marketplace website originally generated with WEBDEV 25 (PC SOFT). It features product browsing, a shopping cart, seller management, and product listing pages.
+## Description
+Mayombe est une librairie en ligne dynamique. Le frontend conserve le design WEBDEV 25 original, enrichi d'une couche JavaScript (`bookstore.js`) qui connecte les pages à un backend Flask + SQLite.
 
-## Tech Stack
-- **Frontend:** Static HTML5, CSS3, JavaScript
-- **Server (dev):** Python's built-in HTTP server
+## Stack Technique
+- **Backend** : Python 3 / Flask 3
+- **Base de données** : SQLite (`data/bookstore.db`)
+- **Frontend** : HTML/CSS statique (WEBDEV 25) + `public/js/bookstore.js` injecté dynamiquement
+- **Serveur dev** : `python3 app.py` (port 5000)
 
-## Project Structure
+## Architecture
+
 ```
+app.py                    ← Flask app (API + serveur fichiers)
+data/bookstore.db         ← Base SQLite (créée automatiquement)
 public/
-  html/     - All HTML pages (index.html, login.html, Mon-panier.html, etc.)
-  css/      - Stylesheets (Mayombe.css, page-specific styles, RWD styles)
-  img/      - Product and UI images
+  html/                   ← Pages HTML (design WEBDEV inchangé)
+  css/                    ← Feuilles de style
+  img/                    ← Images
+  js/
+    bookstore.js          ← Logique dynamique injectée dans chaque page
 ```
 
-## Pages
-- `index.html` - Homepage with product catalog
-- `login.html` - User authentication
-- `Mon-panier.html` - Shopping cart
-- `MABOUTIQUE.html` - Seller/store management
-- `Ajout-Produit.html` - Add product form
-- `PI_Produit.html` - Product detail page
-- `Formulaire.html` - Generic form page
+## Pages & Fonctionnalités
+| Page | Fonction dynamique |
+|---|---|
+| `/` (index.html) | Grille de livres depuis l'API, recherche, filtres genres |
+| `/Mon-panier.html` | Affichage et gestion du panier (session Flask) |
+| `/Ajout-Produit.html` | Formulaire d'ajout d'un livre via l'API |
+| `/PI_Produit.html?id=X` | Détail d'un livre par ID |
+| `/MABOUTIQUE.html` | Vue vendeur : liste + suppression des livres |
 
-## Running the App
-The workflow runs: `python3 -m http.server 5000 --directory public/html`
+## API REST
+| Méthode | Endpoint | Description |
+|---|---|---|
+| GET | `/api/books` | Tous les livres (filtres: `?genre=`, `?search=`) |
+| GET | `/api/books/featured` | Livres en vedette |
+| GET | `/api/books/<id>` | Détail d'un livre |
+| POST | `/api/books` | Ajouter un livre |
+| DELETE | `/api/books/<id>` | Supprimer un livre |
+| GET | `/api/cart` | Contenu du panier (session) |
+| POST | `/api/cart/add` | Ajouter au panier `{id, qty}` |
+| DELETE | `/api/cart/remove/<id>` | Retirer un livre du panier |
+| DELETE | `/api/cart/clear` | Vider le panier |
+| GET | `/api/genres` | Liste des genres disponibles |
 
-## Deployment
-Configured as a **static** deployment with `publicDir: public/html`.
+## Démarrage
+```bash
+python3 app.py
+```
+La base de données SQLite est initialisée automatiquement au démarrage avec 12 livres de démonstration.
