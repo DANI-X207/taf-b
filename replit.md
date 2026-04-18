@@ -8,7 +8,8 @@ Mayombe / Librairie Magma est une librairie en ligne Flask + SQLite. Le frontend
 - **Base de données** : SQLite (`data/bookstore.db`)
 - **Frontend** : HTML/CSS/JS standards, pages séparées dans `public/html/`
 - **PDF** : ReportLab pour les reçus téléchargeables
-- **Serveur dev Replit** : `gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app`
+- **Serveur dev Replit** : `python -m gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app`
+- **Publication Replit** : `python -m gunicorn --bind 0.0.0.0:5000 main:app`
 
 ## Architecture
 
@@ -47,5 +48,5 @@ Sans SMTP, la commande fonctionne et le statut email est enregistré comme `smtp
 
 ## Démarrage
 ```bash
-gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
+python -m gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
 ```
