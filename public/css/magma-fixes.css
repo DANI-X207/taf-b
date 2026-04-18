@@ -206,7 +206,17 @@ nav.wbMenuMain,
   }
 }
 
-/* ── 8. Supprimer le cadre logo cassé (pos6 / dzA4) ─────────────── */
+/* ── 8. Masquer le badge "Made with Replit" ─────────────────────── */
+[data-replit-badge],
+#replit-badge,
+.replit-badge,
+div[id*="replit"],
+a[href*="replit.com"][style*="fixed"],
+iframe[src*="replit.com/badge"] {
+  display: none !important;
+}
+
+/* ── 9. Supprimer le cadre logo cassé (pos6 / dzA4) ─────────────── */
 .pos6,
 #dzA4 {
   display: none !important;

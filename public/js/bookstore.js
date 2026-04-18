@@ -77,23 +77,6 @@
     document.body.appendChild(link);
   }
 
-  function showAds() {
-    get("/api/ads").then(function (ads) {
-      if (!ads.length || document.getElementById("magma-ads")) return;
-      var wrap = document.createElement("div");
-      wrap.id = "magma-ads";
-      wrap.style.cssText = "position:fixed;left:16px;bottom:16px;z-index:99998;display:grid;gap:8px;max-width:310px;";
-      ads.slice(0, 2).forEach(function (ad) {
-        var item = document.createElement(ad.link ? "a" : "div");
-        if (ad.link) item.href = ad.link;
-        item.style.cssText = "display:block;text-decoration:none;background:#fff7ed;border:1px solid #fed7aa;border-left:5px solid #ff690c;border-radius:14px;padding:12px 14px;color:#2b293a;font-family:Arial,sans-serif;box-shadow:0 12px 30px rgba(0,0,0,.14);";
-        item.innerHTML = '<strong style="display:block;margin-bottom:4px;">' + esc(ad.title) + '</strong><span style="font-size:13px;line-height:1.35;">' + esc(ad.message) + '</span>';
-        wrap.appendChild(item);
-      });
-      document.body.appendChild(wrap);
-    }).catch(function () {});
-  }
-
   function updateCartBadge() {
     get("/api/cart").then(function (cart) {
       var count = cart.reduce(function (sum, item) { return sum + Number(item.qty || 0); }, 0);
@@ -404,7 +387,6 @@
 
   function init() {
     addAdminLink();
-    showAds();
     updateCartBadge();
     var page = pageName();
     if (page === "home") initHome();
