@@ -205,3 +205,27 @@ nav.wbMenuMain,
     justify-content: center;
   }
 }
+
+/* ── 8. Supprimer le cadre logo cassé (pos6 / dzA4) ─────────────── */
+.pos6,
+#dzA4 {
+  display: none !important;
+}
+
+/* ── 9. Réduire l'espace de la section sombre "tendances" (A53) ─── */
+#A53 {
+  height: auto !important;
+  min-height: 0 !important;
+}
+.pos92 {
+  height: auto !important;
+  min-height: 0 !important;
+}
+/* con-A73 = template vide jamais rempli → on le masque */
+#con-A73 {
+  display: none !important;
+}
+/* La cellule texte "Nos experts..." garde juste son padding */
+#A54 {
+  padding: 24px 16px !important;
+}
