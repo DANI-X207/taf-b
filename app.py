@@ -15,6 +15,19 @@ PUBLIC_JS = os.path.join(os.path.dirname(__file__), "public", "js")
 
 INJECT_SCRIPT = '<script src="/js/bookstore.js"></script></body>'
 
+SITE_NAME = "Librairie Magma"
+
+PAGE_TITLES = {
+    "index":          SITE_NAME + " — Accueil",
+    "login":          SITE_NAME + " — Connexion",
+    "Mon-panier":     SITE_NAME + " — Mon Panier",
+    "Ajout-Produit":  SITE_NAME + " — Ajouter un Livre",
+    "MABOUTIQUE":     SITE_NAME + " — Ma Boutique",
+    "PI_Produit":     SITE_NAME + " — Détail du Livre",
+    "Formulaire":     SITE_NAME + " — Formulaire",
+    "PAGEMOD-Accueil":SITE_NAME,
+}
+
 
 def get_db():
     conn = sqlite3.connect(DB_PATH)
@@ -93,6 +106,17 @@ def serve_html(filename):
         return Response("Page non trouvée", status=404)
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
+
+    page_key = filename.replace(".html", "")
+    new_title = PAGE_TITLES.get(page_key, SITE_NAME)
+    content = re.sub(r"<title>[^<]*</title>", f"<title>{new_title}</title>", content, count=1)
+
+    content = re.sub(
+        r"(>)([^<]*)Mayombe([^<]*<)",
+        lambda m: m.group(1) + m.group(2) + SITE_NAME + m.group(3),
+        content
+    )
+
     content = content.replace("</body>", INJECT_SCRIPT, 1)
     return Response(content, mimetype="text/html")
 
