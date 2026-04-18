@@ -239,3 +239,21 @@ iframe[src*="replit.com/badge"] {
 #A54 {
   padding: 24px 16px !important;
 }
+
+/* ── 10. Réduire l'espace gris avant la section "Les bonnes affaires" ── */
+/* pos45 avait margin-top:211px, on ramène à rien */
+.pos45 {
+  margin-top: 0 !important;
+}
+
+/* ── 11. Réduire la zone grise après le catalogue (pos86) ─────────── */
+/* pos86 avait height:1584px mais son contenu est masqué → auto */
+.pos86 {
+  height: auto !important;
+  min-height: 0 !important;
+  padding-bottom: 50px !important;
+}
+#A31 {
+  height: auto !important;
+  min-height: 0 !important;
+}
