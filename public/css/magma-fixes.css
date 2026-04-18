@@ -206,7 +206,20 @@ nav.wbMenuMain,
   }
 }
 
-/* ── 8. Masquer le badge "Made with Replit" ─────────────────────── */
+/* ── 8. Supprimer les blocs catalogue flottants (IDs uniques uniquement) */
+/* Le masquage de pos39/pos40 est géré par JS (page d'accueil seulement) */
+#con-A70,
+#magma-catalog,
+#magma-book-list,
+#magma-catalog-tools {
+  display: none !important;
+  height: 0 !important;
+  overflow: hidden !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* ── 9. Masquer le badge "Made with Replit" ─────────────────────── */
 [data-replit-badge],
 #replit-badge,
 .replit-badge,
