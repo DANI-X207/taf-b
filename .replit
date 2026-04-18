@@ -4,6 +4,7 @@ expertMode = true
 
 [nix]
 channel = "stable-25_05"
+packages = ["openssl", "postgresql"]
 
 [workflows]
 runButton = "Project"
@@ -26,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python3 app.py"
+args = "gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
 waitForPort = 5000
 
 [[ports]]
@@ -36,4 +37,4 @@ externalPort = 80
 [deployment]
 deploymentTarget = "autoscale"
 publicDir = "public/html"
-run = ["python3", "app.py"]
+run = ["gunicorn", "--bind", "0.0.0.0:5000", "main:app"]

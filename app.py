@@ -2,10 +2,14 @@ import os
 import re
 import json
 import sqlite3
+import secrets
 from flask import Flask, jsonify, request, session, send_from_directory, Response
 
 app = Flask(__name__)
-app.secret_key = "mayombe-librairie-secret-2026"
+app.secret_key = os.environ.get("SESSION_SECRET")
+if not app.secret_key:
+    app.secret_key = secrets.token_hex(32)
+    app.logger.warning("SESSION_SECRET is not set; using a temporary development secret.")
 
 DB_PATH = os.path.join(os.path.dirname(__file__), "data", "bookstore.db")
 PUBLIC_HTML = os.path.join(os.path.dirname(__file__), "public", "html")
@@ -294,6 +298,8 @@ def get_genres():
     return jsonify(genres)
 
 
+init_db()
+
+
 if __name__ == "__main__":
-    init_db()
     app.run(host="0.0.0.0", port=5000, debug=False)

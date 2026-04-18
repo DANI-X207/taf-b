@@ -1,6 +1,12 @@
 (function () {
   "use strict";
 
+  window.clWDUtil = window.clWDUtil || {
+    pfGetTraitement: function () {
+      return function () {};
+    }
+  };
+
   var API = "";
 
   /* ── Utilitaires ─────────────────────────────────────────────────────── */

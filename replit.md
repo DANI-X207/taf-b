@@ -7,7 +7,7 @@ Mayombe est une librairie en ligne dynamique. Le frontend conserve le design WEB
 - **Backend** : Python 3 / Flask 3
 - **Base de données** : SQLite (`data/bookstore.db`)
 - **Frontend** : HTML/CSS statique (WEBDEV 25) + `public/js/bookstore.js` injecté dynamiquement
-- **Serveur dev** : `python3 app.py` (port 5000)
+- **Serveur dev Replit** : `gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app`
 
 ## Architecture
 
@@ -47,6 +47,10 @@ public/
 
 ## Démarrage
 ```bash
-python3 app.py
+gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
 ```
 La base de données SQLite est initialisée automatiquement au démarrage avec 12 livres de démonstration.
+
+## Notes Replit
+- `main.py` expose l'application Flask pour Gunicorn et le déploiement.
+- La clé de session utilise `SESSION_SECRET` si disponible; sinon une clé temporaire de développement est générée au démarrage.
