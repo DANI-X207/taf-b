@@ -41,6 +41,26 @@ router.post("/api/admin/logout", (req, res) => {
   res.json({ success: true });
 });
 
+router.get("/api/admin/users", requireAdmin(), (req, res) => {
+  const db = getDb();
+  const users = db.prepare(
+    "SELECT id, name, email, created_at, last_login_at FROM users ORDER BY id DESC"
+  ).all();
+  const withOrders = users.map((u) => {
+    const orderCount = db.prepare("SELECT COUNT(*) as cnt FROM orders WHERE user_id = ?").get(u.id);
+    return { ...u, order_count: orderCount ? orderCount.cnt : 0 };
+  });
+  db.close();
+  res.json(withOrders);
+});
+
+router.delete("/api/admin/users/:id", requireAdmin(), (req, res) => {
+  const db = getDb();
+  db.prepare("DELETE FROM users WHERE id = ?").run(parseInt(req.params.id));
+  db.close();
+  res.json({ success: true });
+});
+
 router.get("/api/admin/orders", requireAdmin(), (req, res) => {
   const db = getDb();
   const rows = db.prepare("SELECT * FROM orders ORDER BY id DESC").all();

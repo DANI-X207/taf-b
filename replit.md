@@ -51,9 +51,15 @@ package.json               ← Dépendances Node.js
 - Reçu PDF téléchargeable par commande.
 - Notification email automatique si `SMTP_HOST` est configuré.
 - Admin protégé par mot de passe (`ADMIN_PASSWORD`, défaut `TAF1-FLEMME`).
-- Admin : gestion des livres, publicités et statuts de commandes.
+- Admin : gestion complète — Utilisateurs, Livres, Commandes, Publicités, Téléchargements.
+  - Section Utilisateurs : liste avec nom, email, date inscription, dernière connexion, nb commandes.
+  - Chaque item (livre, commande, utilisateur, publicité) cliquable → modal détail complet.
+  - Statut commande modifiable depuis le modal de détail.
+  - Source ZIP via `/api/source.zip` protégé admin uniquement (`req.session.admin_authenticated`).
+- Connexion accepte email OU nom d'utilisateur (champ unique `email` envoyé).
+- Si compte déjà existant lors de l'inscription → redirection vers `/login.html?info=…`.
+- Déconnexion vide la session complète + efface le cookie `magma_sid`.
 - Avis clients : note 1–5 et commentaire par livre.
-- Export ZIP du code source via `/api/source.zip` (utilisateur connecté requis).
 
 ## Zone de livraison
 Livraison autorisée uniquement pour : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU.

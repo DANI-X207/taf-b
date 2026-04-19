@@ -29,9 +29,9 @@ router.post("/auth/register", async (req, res) => {
       userId = result.lastInsertRowid;
     } catch (e) {
       db.close();
-      const msg = "Un compte existe déjà avec cet email. Connectez-vous directement.";
-      if (req.is("json")) return res.status(409).json({ error: msg });
-      return res.status(409).send(authPageHtml(msg));
+      const msg = "Un compte existe déjà avec cet email ou ce nom d'utilisateur.";
+      if (req.is("json")) return res.status(409).json({ error: msg, redirectTo: "/login.html" });
+      return res.redirect("/login.html?info=" + encodeURIComponent("Compte déjà existant. Connectez-vous."));
     }
     db.close();
     req.session.user_id = userId;
@@ -81,9 +81,11 @@ router.post("/auth/login", async (req, res) => {
 });
 
 router.all("/auth/logout", (req, res) => {
-  req.session.destroy(() => {});
-  if (req.is("json")) return res.json({ success: true });
-  return res.redirect("/login.html");
+  req.session.destroy(() => {
+    res.clearCookie("magma_sid");
+    if (req.is("json")) return res.json({ success: true });
+    return res.redirect("/login.html");
+  });
 });
 
 router.get("/api/auth/status", (req, res) => {
@@ -99,9 +101,11 @@ router.post("/api/auth/login", (req, res, next) => {
   req.url = "/auth/login";
   router.handle(req, res, next);
 });
-router.post("/api/auth/logout", (req, res, next) => {
-  req.session.destroy(() => {});
-  res.json({ success: true });
+router.post("/api/auth/logout", (req, res) => {
+  req.session.destroy(() => {
+    res.clearCookie("magma_sid");
+    res.json({ success: true });
+  });
 });
 
 module.exports = router;

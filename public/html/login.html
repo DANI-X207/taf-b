@@ -97,6 +97,14 @@
     margin-bottom: 16px;
     font-size: 13px;
   }
+  .info-msg {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
 
   .field-group {
     margin-bottom: 18px;
@@ -193,8 +201,8 @@
 
     <form id="login-form" method="post" action="/auth/login">
       <div class="field-group">
-        <label for="email">Nom d'utilisateur</label>
-        <input type="email" id="email" name="email" required autocomplete="email" placeholder="">
+        <label for="email">Nom d'utilisateur ou Email</label>
+        <input type="text" id="email" name="email" required autocomplete="username email" placeholder="">
       </div>
       <div class="field-group">
         <label for="password">Mot de passe</label>
@@ -211,5 +219,25 @@
   </div>
 </div>
 
+<script>
+(function () {
+  var params = new URLSearchParams(window.location.search);
+  var info = params.get("info");
+  var err = params.get("error");
+  var container = document.getElementById("error-container");
+  if (info && container) {
+    var d = document.createElement("div");
+    d.className = "info-msg";
+    d.textContent = decodeURIComponent(info);
+    container.appendChild(d);
+  }
+  if (err && container) {
+    var d2 = document.createElement("div");
+    d2.className = "error-msg";
+    d2.textContent = decodeURIComponent(err);
+    container.appendChild(d2);
+  }
+})();
+</script>
 </body>
 </html>

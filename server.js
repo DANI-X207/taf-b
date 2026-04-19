@@ -23,10 +23,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const sessionSecret = process.env.SESSION_SECRET || crypto.randomBytes(32).toString("hex");
-const secureCookie = process.env.SESSION_COOKIE_SECURE !== "false";
+const isProduction = process.env.NODE_ENV === "production";
+const secureCookie = process.env.SESSION_COOKIE_SECURE === "true" || isProduction;
 const sessionDays = parseInt(process.env.SESSION_DAYS || "7");
 
 app.use(session({
+  name: "magma_sid",
   secret: sessionSecret,
   resave: false,
   saveUninitialized: false,

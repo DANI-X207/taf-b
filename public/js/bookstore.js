@@ -482,8 +482,18 @@
       var email = document.getElementById("reg-email").value.trim();
       var pass = document.getElementById("reg-password").value;
       if (!name || !email || !pass) { toast("Veuillez remplir tous les champs.", "error"); return; }
-      post("/api/auth/register", { name: name, email: email, password: pass })
-        .then(function () { window.location.href = "/"; })
+      fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email, password: pass }) })
+        .then(function (r) {
+          return r.json().then(function (d) {
+            if (r.status === 409) {
+              window.location.href = "/login.html?info=" + encodeURIComponent("Un compte existe déjà. Connectez-vous.");
+            } else if (!r.ok) {
+              throw d;
+            } else {
+              window.location.href = "/";
+            }
+          });
+        })
         .catch(function (err) { toast((err && err.error) || "Inscription impossible.", "error"); });
     });
 
