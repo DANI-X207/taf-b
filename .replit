@@ -1,4 +1,4 @@
-modules = ["web", "python-3.11", "python3"]
+modules = ["web", "python-3.11", "python3", "nodejs-20"]
 [agent]
 expertMode = true
 
@@ -27,7 +27,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "python -m gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app"
+args = "node server.js"
 waitForPort = 5000
 
 [[ports]]

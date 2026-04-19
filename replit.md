@@ -1,60 +1,79 @@
-# Mayombe — Librairie en Ligne
+# Librairie Magma — Librairie en Ligne
 
 ## Description
-Mayombe / Librairie Magma est une librairie en ligne Flask + SQLite. Le frontend importé reste organisé en pages HTML séparées et n'a pas été modifié ; les nouvelles protections et fonctionnalités sont gérées côté serveur.
+Librairie Magma est une librairie en ligne Node.js/Express + SQLite. Le frontend WEBDEV exporté reste organisé en pages HTML séparées dans `public/html/` ; les protections, l'authentification et toutes les fonctionnalités métier sont gérées par le serveur Node.js.
 
 ## Stack Technique
-- **Backend** : Python 3 / Flask 3
-- **Base de données** : SQLite (`data/bookstore.db`)
+- **Backend** : Node.js 20 / Express 4
+- **Base de données** : SQLite (`data/bookstore.db`) via `better-sqlite3` (synchrone)
 - **Frontend** : HTML/CSS/JS standards, pages séparées dans `public/html/`
-- **PDF** : ReportLab pour les reçus téléchargeables
-- **Sécurité** : mots de passe hashés Werkzeug, sessions Flask HttpOnly/Secure/SameSite strict
-- **Serveur dev Replit** : `python -m gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app`
-- **Publication Replit** : `python -m gunicorn --bind 0.0.0.0:5000 main:app`
-- **Compatibilité** : `requirements.txt`, `vercel.json`, `netlify.toml`, fonction Netlify WSGI
+- **PDF** : PDFKit pour les reçus téléchargeables
+- **Email** : Nodemailer (optionnel, si SMTP configuré)
+- **ZIP source** : archiver
+- **Sécurité** : mots de passe hashés bcrypt (cost 12), sessions express-session HttpOnly/Secure/SameSite strict
+- **Serveur dev** : `node server.js` (port 5000)
+- **Config** : `.env` (voir `.env.example`)
 
 ## Architecture
 
 ```
-app.py                    ← Flask app, API, SQLite, auth, commandes, PDF, admin, ZIP source
-main.py                   ← Point d'entrée Gunicorn/Vercel
-netlify/functions/app.py  ← Adaptateur serverless Netlify
-public/html/              ← Pages HTML séparées conservées
-public/html/Admin.html    ← Espace admin protégé
-public/js/bookstore.js    ← Frontend importé conservé
-requirements.txt          ← Dépendances Python pour plateformes externes
-data/bookstore.db         ← Base SQLite créée automatiquement
+server.js                  ← Point d'entrée Express (session, routes, statiques)
+src/
+  db.js                    ← Init SQLite, schema, migrations, seed livres/publicités
+  helpers.js               ← Validation : cleanText/Email/Password/Phone/Url, rowToBook
+  middleware.js            ← requireAdmin, requireUser, getCurrentUser, isAuthenticated
+  routes/
+    auth.js                ← POST /auth/register, /auth/login, /auth/logout + /api/auth/*
+    books.js               ← GET/POST/PUT/DELETE /api/books*, /api/genres
+    cart.js                ← GET/POST/DELETE /api/cart/*
+    orders.js              ← POST /api/orders, GET/cancel/receipt /api/orders/:id
+    reviews.js             ← POST /api/reviews
+    admin.js               ← /api/admin/* (login, orders, ads, livres)
+    pages.js               ← Serveur HTML avec injection CSS/JS/shims, authPageHtml, /api/ads, /api/source.zip
+public/
+  html/                    ← Pages HTML WEBDEV (index, MABOUTIQUE, PI_Produit, Formulaire, Admin…)
+  css/magma-fixes.css      ← Corrections CSS layout injectées dans chaque page
+  js/bookstore.js          ← Frontend JS injecté dans chaque page
+  img/                     ← Images statiques
+data/bookstore.db          ← SQLite créée automatiquement
+.env / .env.example        ← Variables d'environnement
+package.json               ← Dépendances Node.js
 ```
 
 ## Fonctionnalités
 - Compte client obligatoire avant accès au catalogue, panier, avis et commande.
 - Création/connexion client avec validation claire des champs.
 - Catalogue avec recherche texte et filtre par catégorie.
-- Panier avec ajout/suppression.
+- Panier avec ajout/suppression (stocké en session).
 - Commande avec validation de zone de livraison.
 - Annulation possible pendant 5 minutes après validation.
 - Suivi de commande : En attente → Confirmée → En livraison → Livrée.
 - Reçu PDF téléchargeable par commande.
-- Notification email automatique tentée vers `moussokiexauce7@gmail.com` si `SMTP_HOST` est configuré.
-- Admin protégé par mot de passe `TAF1-FLEMME`.
-- Admin : ajout, modification, suppression de livres, gestion des publicités et statuts de commandes via API.
+- Notification email automatique si `SMTP_HOST` est configuré.
+- Admin protégé par mot de passe (`ADMIN_PASSWORD`, défaut `TAF1-FLEMME`).
+- Admin : gestion des livres, publicités et statuts de commandes.
 - Avis clients : note 1–5 et commentaire par livre.
-- Export ZIP du code source via `/api/source.zip` ou `/download-source.zip` après connexion.
+- Export ZIP du code source via `/api/source.zip` (utilisateur connecté requis).
 
 ## Zone de livraison
-Livraison autorisée uniquement pour : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU. Toute autre zone est refusée côté serveur avec un message clair.
+Livraison autorisée uniquement pour : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU.
 
 ## Email de commande
-Pour activer l'envoi réel des emails, configurer les variables d'environnement :
-- `SMTP_HOST`
-- `SMTP_PORT` (par défaut 587)
-- `SMTP_USER`
-- `SMTP_PASSWORD`
-- `SMTP_FROM` (optionnel)
+Pour activer l'envoi réel des emails, configurer dans `.env` :
+- `SMTP_HOST`, `SMTP_PORT` (défaut 587), `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM`
 
 Sans SMTP, la commande fonctionne et le statut email est enregistré comme `smtp_not_configured`.
 
 ## Démarrage
 ```bash
-python -m gunicorn --bind 0.0.0.0:5000 --reuse-port --reload main:app
+node server.js
 ```
+Ou avec nodemon pour le rechargement automatique en développement :
+```bash
+npx nodemon server.js
+```
+
+## Layout WEBDEV — règles importantes
+- Ne JAMAIS toucher au `margin-top` de `.pos45` (valeur fixée à 211px — positionne la section orange sous les catégories).
+- Ne jamais modifier les couleurs ni le layout WEBDEV exporté.
+- Toujours modifier via `public/css/magma-fixes.css` ou `public/js/bookstore.js`.
