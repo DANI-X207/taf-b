@@ -44,7 +44,8 @@
     if (p.indexOf("Ajout-Produit") !== -1) return "add";
     if (p.indexOf("PI_Produit") !== -1) return "detail";
     if (p.indexOf("MABOUTIQUE") !== -1) return "boutique";
-    if (p.indexOf("Admin") !== -1 || p.indexOf("login") !== -1) return "admin";
+    if (p.indexOf("login") !== -1 || p.indexOf("connexion") !== -1 || p.indexOf("register") !== -1 || p.indexOf("inscription") !== -1) return "login";
+    if (p.indexOf("Admin") !== -1) return "admin";
     return "other";
   }
 
@@ -376,6 +377,84 @@
     get("/api/admin/status").then(function (status) { status.authenticated ? renderPanel() : loginForm(); }).catch(loginForm);
   }
 
+  function initLogin() {
+    var params = new URLSearchParams(window.location.search);
+    var errorMsg = params.get("error");
+
+    var inp = function (id, type, placeholder, autocomplete) {
+      return '<input id="' + id + '" type="' + type + '" placeholder="' + placeholder + '" autocomplete="' + autocomplete + '" style="width:100%;padding:12px 14px;margin:5px 0;border:1px solid #e0e0e0;border-radius:12px;font-size:15px;box-sizing:border-box;font-family:Arial,sans-serif;">';
+    };
+    var btn = function (id, label, dark) {
+      var bg = dark ? "#2b293a" : "#ff690c";
+      return '<button id="' + id + '" type="button" style="display:inline-block;background:' + bg + ';color:#fff;border:0;border-radius:999px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;font-family:Arial,sans-serif;">' + label + '</button>';
+    };
+    var errHtml = errorMsg ? '<p style="background:#fee4e2;color:#b42318;padding:11px 14px;border-radius:12px;margin:0 0 14px;font-size:14px;">' + esc(decodeURIComponent(errorMsg)) + '</p>' : '';
+
+    var shell = document.createElement("div");
+    shell.id = "magma-login-shell";
+    shell.style.cssText = "position:fixed;inset:0;z-index:9999;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;box-sizing:border-box;font-family:Arial,sans-serif;background:linear-gradient(135deg,#ff690c 0%,#f59e0b 45%,#2b293a 100%);";
+    shell.innerHTML =
+      '<div style="width:min(980px,100%)">' +
+        '<h1 style="margin:0 0 6px;font-size:34px;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.3);">Librairie Magma</h1>' +
+        '<p style="margin:0 0 22px;color:rgba(255,255,255,.88);font-size:16px;">Créez un compte ou connectez-vous pour accéder au catalogue, au panier et aux commandes.</p>' +
+        errHtml +
+        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;">' +
+          '<section style="background:#fff;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.18);">' +
+            '<h2 style="margin:0 0 14px;color:#2b293a;font-size:20px;">Créer un compte</h2>' +
+            inp("reg-name", "text", "Nom complet", "name") +
+            inp("reg-email", "email", "Email", "email") +
+            inp("reg-password", "password", "Mot de passe (lettre + chiffre)", "new-password") +
+            btn("reg-submit", "Créer mon compte") +
+          '</section>' +
+          '<section style="background:#fff7ed;border:1px solid #fed7aa;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.18);">' +
+            '<h2 style="margin:0 0 14px;color:#2b293a;font-size:20px;">Déjà client</h2>' +
+            inp("login-email", "email", "Email", "email") +
+            inp("login-password", "password", "Mot de passe", "current-password") +
+            btn("login-submit", "Me connecter") +
+          '</section>' +
+        '</div>' +
+        '<p style="margin:20px 0 0;display:flex;gap:12px;flex-wrap:wrap;">' +
+          btn("goto-admin", "Connexion Admin", true) +
+          '<a href="/api/source.zip" style="display:inline-block;background:#ff690c;color:#fff;text-decoration:none;border-radius:999px;padding:12px 20px;font-size:15px;font-weight:700;margin-top:8px;">Télécharger le code source</a>' +
+        '</p>' +
+        '<p style="margin:14px 0 0;color:rgba(255,255,255,.65);font-size:12px;">Session sécurisée : cookie HttpOnly, SameSite strict.</p>' +
+      '</div>';
+
+    document.body.appendChild(shell);
+
+    document.getElementById("goto-admin").addEventListener("click", function () { window.location.href = "/Admin.html"; });
+
+    document.getElementById("reg-submit").addEventListener("click", function () {
+      post("/api/auth/register", {
+        name: document.getElementById("reg-name").value,
+        email: document.getElementById("reg-email").value,
+        password: document.getElementById("reg-password").value
+      }).then(function () { window.location.href = "/"; })
+        .catch(function (err) { toast((err && err.error) || "Inscription impossible.", "error"); });
+    });
+
+    document.getElementById("login-submit").addEventListener("click", function () {
+      var email = document.getElementById("login-email").value.trim();
+      var pass = document.getElementById("login-password").value;
+      if (!email || !pass) { toast("Veuillez saisir votre email et mot de passe.", "error"); return; }
+      post("/api/auth/login", { email: email, password: pass })
+        .then(function () { window.location.href = "/"; })
+        .catch(function (err) { toast((err && err.error) || "Email ou mot de passe incorrect.", "error"); });
+    });
+
+    ["login-email", "login-password", "reg-name", "reg-email", "reg-password"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") {
+          if (id.startsWith("login")) document.getElementById("login-submit").click();
+          else document.getElementById("reg-submit").click();
+        }
+      });
+    });
+
+    if (errorMsg) toast(decodeURIComponent(errorMsg), "error");
+  }
+
   function initLegacyAdd() {
     var btn = document.getElementById("A8");
     if (!btn) return;
@@ -392,6 +471,7 @@
     if (page === "home") initHome();
     if (page === "cart") initCart();
     if (page === "detail") initDetail();
+    if (page === "login") { initLogin(); return; }
     if (page === "admin" || page === "boutique") initAdmin();
     if (page === "add") initLegacyAdd();
   }

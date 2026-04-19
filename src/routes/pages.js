@@ -106,7 +106,6 @@ ${msg}
 function serveHtml(filename, req, res) {
   if (AUTH_PAGES.has(filename)) {
     if (isAuthenticated(req)) return res.redirect("/");
-    return res.type("html").send(authPageHtml());
   }
   if (PROTECTED_PAGES.has(filename) && !isAuthenticated(req)) {
     return res.redirect("/login.html");

@@ -240,6 +240,30 @@ iframe[src*="replit.com/badge"] {
   padding: 24px 16px !important;
 }
 
+/* ── LOGIN PAGE – fond dégradé + masquer le contenu WEBDEV brut ───── */
+html:has(form[name="PAGE_LOGIN"]) {
+  background: linear-gradient(135deg, #ff690c 0%, #f59e0b 45%, #2b293a 100%) !important;
+  min-height: 100%;
+}
+html:has(form[name="PAGE_LOGIN"]) body {
+  background: transparent !important;
+}
+html:has(form[name="PAGE_LOGIN"]) #page,
+html:has(form[name="PAGE_LOGIN"]) .pos1,
+html:has(form[name="PAGE_LOGIN"]) .pos2 {
+  background: transparent !important;
+  box-shadow: none !important;
+  border: none !important;
+  display: block !important;
+  max-width: none !important;
+  overflow: visible !important;
+}
+html:has(form[name="PAGE_LOGIN"]) form[name="PAGE_LOGIN"] > div {
+  visibility: hidden !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
 /* ── 10. Zone grise après le catalogue (pos86) ─────────────────────── */
 /* pos86 avait height:1584px mais son contenu est masqué → auto */
 .pos86 {
