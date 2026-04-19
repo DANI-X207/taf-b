@@ -515,7 +515,8 @@
     if (page === "detail") initDetail();
     if (page === "login") { initLogin(); return; }
     if (page === "register") { initRegister(); return; }
-    if (page === "admin" || page === "boutique") initAdmin();
+    if (page === "boutique") initAdmin();
+    if (page === "admin" && !document.getElementById("admin-dashboard")) initAdmin();
     if (page === "add") initLegacyAdd();
   }
 

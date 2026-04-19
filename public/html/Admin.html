@@ -3,24 +3,583 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Librairie Magma — Admin</title>
-  <link rel="stylesheet" href="/PAGE_Home_style.css">
+  <title>Librairie Magma — Administration</title>
   <style>
-    body { margin: 0; min-height: 100vh; background: linear-gradient(135deg, #f8f3ef, #fff); color: #2b293a; }
-    .admin-shell { max-width: 1100px; margin: 40px auto; padding: 20px; }
-    .admin-hero { background: #2b293a; color: white; padding: 28px; border-radius: 24px; box-shadow: 0 18px 60px rgba(0,0,0,.18); }
-    .admin-hero a { color: #ffd8bd; }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; background: #f0f2f5; color: #2b293a; min-height: 100vh; }
+
+    /* ── LOGIN SCREEN ── */
+    #admin-login-screen {
+      position: fixed; inset: 0; z-index: 9999;
+      display: flex; align-items: center; justify-content: center;
+      background: #1a1928;
+    }
+    .login-box {
+      background: #fff; border-radius: 8px; padding: 48px 44px;
+      width: min(420px, 94vw); box-shadow: 0 20px 60px rgba(0,0,0,.4);
+      text-align: center;
+    }
+    .login-box .logo { width: 60px; height: 60px; margin: 0 auto 20px; }
+    .login-box .logo img { width: 100%; height: 100%; object-fit: contain; }
+    .login-box h1 { font-size: 22px; font-weight: 700; color: #2b293a; margin-bottom: 6px; }
+    .login-box p { font-size: 13px; color: #999; margin-bottom: 28px; }
+    .login-box input {
+      width: 100%; padding: 12px 14px; border: 1px solid #ddd;
+      border-radius: 4px; font-size: 14px; background: #f7f7f7; outline: none;
+      margin-bottom: 16px; transition: border-color .2s;
+    }
+    .login-box input:focus { border-color: #ff690c; background: #fff; }
+    .login-box button {
+      width: 100%; padding: 13px; background: #ff690c; color: #fff;
+      font-size: 15px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer;
+    }
+    .login-box button:hover { background: #e55a00; }
+    .login-error { background: #fee4e2; color: #b42318; padding: 10px; border-radius: 4px; font-size: 13px; margin-bottom: 14px; }
+
+    /* ── DASHBOARD SHELL ── */
+    #admin-dashboard { display: none; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar {
+      position: fixed; left: 0; top: 0; bottom: 0; width: 230px;
+      background: #2b293a; display: flex; flex-direction: column;
+      z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,.18);
+    }
+    .sidebar-brand {
+      padding: 24px 20px 20px;
+      border-bottom: 1px solid rgba(255,255,255,.1);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .sidebar-brand img { width: 36px; height: 36px; object-fit: contain; filter: brightness(0) invert(1); }
+    .sidebar-brand span { color: #fff; font-size: 15px; font-weight: 700; line-height: 1.2; }
+    .sidebar-brand small { display: block; color: rgba(255,255,255,.45); font-size: 10px; font-weight: 400; }
+    .sidebar-nav { flex: 1; padding: 16px 0; overflow-y: auto; }
+    .nav-item {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 20px; color: rgba(255,255,255,.65);
+      cursor: pointer; font-size: 14px; border-left: 3px solid transparent;
+      transition: all .15s;
+    }
+    .nav-item:hover { background: rgba(255,255,255,.06); color: #fff; }
+    .nav-item.active { background: rgba(255,105,12,.15); color: #ff690c; border-left-color: #ff690c; }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; flex-shrink: 0; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.1); }
+    .sidebar-footer a {
+      display: block; color: rgba(255,255,255,.5); font-size: 13px;
+      text-decoration: none; margin-bottom: 10px;
+    }
+    .sidebar-footer a:hover { color: #fff; }
+    .btn-logout {
+      width: 100%; padding: 10px; background: rgba(255,255,255,.08);
+      color: rgba(255,255,255,.75); border: 1px solid rgba(255,255,255,.15);
+      border-radius: 4px; font-size: 13px; cursor: pointer; transition: all .15s;
+    }
+    .btn-logout:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+    /* MAIN CONTENT */
+    .main-content {
+      margin-left: 230px; padding: 32px 28px; min-height: 100vh;
+    }
+    .page-header {
+      margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between;
+    }
+    .page-header h2 { font-size: 22px; font-weight: 700; color: #2b293a; }
+    .page-header p { font-size: 13px; color: #999; margin-top: 3px; }
+
+    /* CARDS */
+    .card {
+      background: #fff; border-radius: 8px; padding: 24px;
+      box-shadow: 0 2px 12px rgba(0,0,0,.07); margin-bottom: 24px;
+    }
+    .card h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; color: #2b293a; padding-bottom: 12px; border-bottom: 1px solid #f0f0f0; }
+
+    /* FORM FIELDS */
+    .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .form-grid.full { grid-template-columns: 1fr; }
+    .form-group { display: flex; flex-direction: column; gap: 5px; }
+    .form-group label { font-size: 12px; color: #666; font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+    .form-group input, .form-group textarea, .form-group select {
+      padding: 9px 12px; border: 1px solid #ddd; border-radius: 4px;
+      font-size: 14px; background: #fafafa; outline: none;
+      transition: border-color .2s; font-family: Arial, sans-serif;
+    }
+    .form-group input:focus, .form-group textarea:focus { border-color: #ff690c; background: #fff; }
+    .form-group textarea { min-height: 80px; resize: vertical; }
+    .form-group.span2 { grid-column: span 2; }
+
+    /* BUTTONS */
+    .btn { padding: 10px 20px; border: none; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all .15s; }
+    .btn-primary { background: #ff690c; color: #fff; }
+    .btn-primary:hover { background: #e55a00; }
+    .btn-secondary { background: #f0f0f0; color: #555; }
+    .btn-secondary:hover { background: #e0e0e0; }
+    .btn-danger { background: #fee4e2; color: #b42318; }
+    .btn-danger:hover { background: #fca5a5; }
+    .btn-sm { padding: 6px 12px; font-size: 12px; }
+    .btn-group { display: flex; gap: 8px; margin-top: 16px; }
+
+    /* BOOK LIST */
+    .book-row {
+      display: flex; align-items: center; gap: 14px;
+      padding: 12px 0; border-bottom: 1px solid #f4f4f4;
+    }
+    .book-row:last-child { border-bottom: none; }
+    .book-row img { width: 44px; height: 58px; object-fit: cover; border-radius: 4px; background: #eee; flex-shrink: 0; }
+    .book-row .info { flex: 1; min-width: 0; }
+    .book-row .info strong { display: block; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .book-row .info small { color: #888; font-size: 12px; }
+    .book-row .actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+    /* ORDERS */
+    .order-card {
+      border: 1px solid #eee; border-radius: 6px; padding: 14px;
+      margin-bottom: 12px; background: #fafafa;
+    }
+    .order-card .order-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
+    .order-card .order-id { font-weight: 700; font-size: 14px; }
+    .order-card .order-status { font-size: 12px; padding: 3px 10px; border-radius: 999px; font-weight: 600; }
+    .status-attente { background: #fef9c3; color: #854d0e; }
+    .status-confirmee { background: #dcfce7; color: #166534; }
+    .status-livraison { background: #dbeafe; color: #1e40af; }
+    .status-livree { background: #f0fdf4; color: #166534; }
+    .status-annulee { background: #fee4e2; color: #b42318; }
+    .order-card .order-info { font-size: 13px; color: #555; margin-bottom: 10px; }
+    .order-items { font-size: 12px; color: #777; margin-bottom: 10px; }
+    .order-actions { display: flex; gap: 8px; align-items: center; }
+    .order-actions select { padding: 6px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px; }
+
+    /* ADS */
+    .ad-item {
+      display: flex; justify-content: space-between; align-items: flex-start;
+      padding: 12px; background: #fafafa; border: 1px solid #eee;
+      border-radius: 6px; margin-bottom: 8px;
+    }
+    .ad-item .ad-info strong { display: block; font-size: 14px; margin-bottom: 4px; }
+    .ad-item .ad-info small { color: #888; font-size: 12px; }
+
+    /* DOWNLOAD CARD */
+    .download-card {
+      display: flex; align-items: center; gap: 20px;
+      padding: 24px; background: #fff; border-radius: 8px;
+      border: 2px dashed #ddd; cursor: pointer; transition: all .2s;
+    }
+    .download-card:hover { border-color: #ff690c; background: #fff8f5; }
+    .download-card .dl-icon { font-size: 36px; }
+    .download-card .dl-info strong { display: block; font-size: 15px; margin-bottom: 4px; }
+    .download-card .dl-info small { color: #888; font-size: 13px; }
+
+    /* STATS */
+    .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-box { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+    .stat-box .stat-label { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
+    .stat-box .stat-value { font-size: 28px; font-weight: 700; color: #2b293a; }
+    .stat-box .stat-sub { font-size: 12px; color: #ff690c; margin-top: 4px; }
+
+    /* SECTION VISIBILITY */
+    .section { display: none; }
+    .section.active { display: block; }
+
+    /* CHECKBOX */
+    .check-label { display: flex; align-items: center; gap: 8px; font-size: 14px; color: #555; cursor: pointer; }
+    .check-label input { accent-color: #ff690c; width: 15px; height: 15px; }
+
+    @media (max-width: 700px) {
+      .sidebar { width: 60px; }
+      .sidebar-brand span, .sidebar-brand small, .nav-item span, .sidebar-footer a, .btn-logout { display: none; }
+      .sidebar-brand { padding: 16px 12px; }
+      .nav-item { padding: 14px; justify-content: center; }
+      .nav-item .icon { width: auto; }
+      .main-content { margin-left: 60px; padding: 20px 14px; }
+      .form-grid { grid-template-columns: 1fr; }
+      .form-group.span2 { grid-column: span 1; }
+    }
   </style>
 </head>
 <body>
-  <main class="admin-shell">
-    <section class="admin-hero">
-      <h1>Administration Librairie Magma</h1>
-      <p>Cette page séparée gère les livres et publicités avec un accès protégé.</p>
-      <p><a href="/">Retour au catalogue</a> · <a href="/Mon-panier.html">Voir le panier</a></p>
-    </section>
-    <section id="magma-admin-root"></section>
+
+<!-- LOGIN SCREEN -->
+<div id="admin-login-screen">
+  <div class="login-box">
+    <div class="logo"><img src="/img/Logo version mobile.png" alt="Magma"></div>
+    <h1>Espace Administrateur</h1>
+    <p>Accès protégé — Librairie Magma</p>
+    <div id="login-error" class="login-error" style="display:none;"></div>
+    <input type="password" id="admin-password" placeholder="Mot de passe administrateur" autocomplete="current-password">
+    <button id="admin-login-btn">Se connecter</button>
+  </div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="admin-dashboard">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-brand">
+      <img src="/img/Logo version mobile.png" alt="Logo">
+      <div>
+        <span>Magma<br><small>Administration</small></span>
+      </div>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-item active" data-section="dashboard">
+        <span class="icon">📊</span><span>Tableau de bord</span>
+      </div>
+      <div class="nav-item" data-section="books">
+        <span class="icon">📚</span><span>Livres</span>
+      </div>
+      <div class="nav-item" data-section="orders">
+        <span class="icon">📦</span><span>Commandes</span>
+      </div>
+      <div class="nav-item" data-section="ads">
+        <span class="icon">📢</span><span>Publicités</span>
+      </div>
+      <div class="nav-item" data-section="downloads">
+        <span class="icon">⬇️</span><span>Téléchargements</span>
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <a href="/">← Retour au catalogue</a>
+      <button class="btn-logout" id="admin-logout-btn">Déconnexion</button>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main-content">
+
+    <!-- DASHBOARD -->
+    <div class="section active" id="section-dashboard">
+      <div class="page-header">
+        <div><h2>Tableau de bord</h2><p>Vue d'ensemble de la librairie</p></div>
+      </div>
+      <div class="stats-row" id="stats-row">
+        <div class="stat-box"><div class="stat-label">Livres</div><div class="stat-value" id="stat-books">—</div><div class="stat-sub">dans le catalogue</div></div>
+        <div class="stat-box"><div class="stat-label">Commandes</div><div class="stat-value" id="stat-orders">—</div><div class="stat-sub">au total</div></div>
+        <div class="stat-box"><div class="stat-label">En attente</div><div class="stat-value" id="stat-pending">—</div><div class="stat-sub">à traiter</div></div>
+        <div class="stat-box"><div class="stat-label">Publicités</div><div class="stat-value" id="stat-ads">—</div><div class="stat-sub">actives</div></div>
+      </div>
+      <div class="card">
+        <h3>Dernières commandes</h3>
+        <div id="dashboard-orders">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- BOOKS -->
+    <div class="section" id="section-books">
+      <div class="page-header">
+        <div><h2>Gestion des livres</h2><p>Ajouter, modifier ou supprimer des livres</p></div>
+        <button class="btn btn-secondary btn-sm" id="book-reset-btn">+ Nouveau livre</button>
+      </div>
+      <div class="card">
+        <h3 id="book-form-title">Ajouter un livre</h3>
+        <input type="hidden" id="book-id">
+        <div class="form-grid">
+          <div class="form-group"><label>Titre *</label><input type="text" id="book-title" placeholder="Titre du livre"></div>
+          <div class="form-group"><label>Auteur *</label><input type="text" id="book-author" placeholder="Nom de l'auteur"></div>
+          <div class="form-group"><label>Catégorie *</label><input type="text" id="book-category" placeholder="Ex: Roman, Science-fiction…"></div>
+          <div class="form-group"><label>Prix (FCFA) *</label><input type="number" id="book-price" placeholder="0" min="1"></div>
+          <div class="form-group"><label>URL de l'image</label><input type="text" id="book-image" placeholder="https://…"></div>
+          <div class="form-group"><label>Stock</label><input type="number" id="book-stock" placeholder="10" min="0"></div>
+          <div class="form-group span2"><label>Description</label><textarea id="book-description" placeholder="Description du livre…"></textarea></div>
+          <div class="form-group span2"><label>Informations supplémentaires</label><textarea id="book-infos" placeholder="ISBN, édition, langue…"></textarea></div>
+          <div class="form-group span2">
+            <label class="check-label"><input type="checkbox" id="book-featured"> Mettre en vedette sur la page d'accueil</label>
+          </div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="book-save-btn">Enregistrer le livre</button>
+          <button class="btn btn-secondary" id="book-cancel-btn">Annuler</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Catalogue <span id="books-count" style="font-weight:400;color:#999;"></span></h3>
+        <div id="admin-books-list">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- ORDERS -->
+    <div class="section" id="section-orders">
+      <div class="page-header">
+        <div><h2>Gestion des commandes</h2><p>Suivre et mettre à jour les statuts</p></div>
+        <button class="btn btn-secondary btn-sm" id="orders-refresh-btn">↻ Actualiser</button>
+      </div>
+      <div id="orders-list">Chargement…</div>
+    </div>
+
+    <!-- ADS -->
+    <div class="section" id="section-ads">
+      <div class="page-header">
+        <div><h2>Publicités</h2><p>Gérer les annonces affichées aux clients</p></div>
+      </div>
+      <div class="card">
+        <h3>Nouvelle publicité</h3>
+        <div class="form-grid">
+          <div class="form-group"><label>Titre *</label><input type="text" id="ad-title" placeholder="Titre de la publicité"></div>
+          <div class="form-group"><label>Lien (optionnel)</label><input type="text" id="ad-link" placeholder="https://…"></div>
+          <div class="form-group span2"><label>Message *</label><textarea id="ad-message" placeholder="Contenu de la publicité…" style="min-height:60px;"></textarea></div>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary" id="ad-save-btn">Publier la publicité</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>Publicités actives</h3>
+        <div id="ads-list">Chargement…</div>
+      </div>
+    </div>
+
+    <!-- DOWNLOADS -->
+    <div class="section" id="section-downloads">
+      <div class="page-header">
+        <div><h2>Téléchargements</h2><p>Ressources accessibles uniquement à l'administrateur</p></div>
+      </div>
+      <div class="card">
+        <h3>Code source du projet</h3>
+        <p style="font-size:13px;color:#888;margin-bottom:20px;">Téléchargez l'intégralité du code source de la Librairie Magma au format ZIP. Cette option est réservée à l'administration.</p>
+        <a href="/api/source.zip" class="download-card" style="text-decoration:none;color:inherit;" id="dl-source">
+          <div class="dl-icon">📦</div>
+          <div class="dl-info">
+            <strong>librairie-magma-source.zip</strong>
+            <small>Code source complet — serveur, frontend, base de données</small>
+          </div>
+        </a>
+      </div>
+    </div>
+
   </main>
-  <script src="/js/bookstore.js"></script>
+</div>
+
+<script>
+(function () {
+  var loginScreen = document.getElementById("admin-login-screen");
+  var dashboard = document.getElementById("admin-dashboard");
+
+  function api(url, options) {
+    return fetch(url, options || {}).then(function (r) {
+      return r.json().then(function (d) {
+        if (!r.ok) throw d;
+        return d;
+      });
+    });
+  }
+  function get(url) { return api(url); }
+  function post(url, data) { return api(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data || {}) }); }
+  function put(url, data) { return api(url, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data || {}) }); }
+  function del(url) { return api(url, { method: "DELETE" }); }
+  function esc(v) { return String(v == null ? "" : v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function money(v) { return Number(v || 0).toLocaleString("fr-FR") + " FCFA"; }
+
+  function toast(msg, type) {
+    var t = document.createElement("div");
+    t.textContent = msg;
+    t.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:99999;padding:13px 18px;border-radius:6px;color:#fff;font-size:14px;font-family:Arial,sans-serif;box-shadow:0 8px 24px rgba(0,0,0,.2);transition:.3s;";
+    t.style.background = type === "error" ? "#b42318" : "#2b293a";
+    document.body.appendChild(t);
+    setTimeout(function () { t.style.opacity = "0"; setTimeout(function () { t.remove(); }, 300); }, 3200);
+  }
+
+  function statusClass(s) {
+    if (s === "En attente") return "status-attente";
+    if (s === "Confirmée") return "status-confirmee";
+    if (s === "En livraison") return "status-livraison";
+    if (s === "Livrée") return "status-livree";
+    if (s === "Annulée") return "status-annulee";
+    return "";
+  }
+
+  /* ── NAVIGATION ── */
+  function activateSection(name) {
+    document.querySelectorAll(".nav-item").forEach(function (el) { el.classList.remove("active"); });
+    document.querySelectorAll(".section").forEach(function (el) { el.classList.remove("active"); });
+    var nav = document.querySelector("[data-section='" + name + "']");
+    var sec = document.getElementById("section-" + name);
+    if (nav) nav.classList.add("active");
+    if (sec) sec.classList.add("active");
+    if (name === "books") loadBooks();
+    if (name === "orders") loadOrders();
+    if (name === "ads") loadAds();
+    if (name === "dashboard") loadDashboard();
+  }
+
+  document.querySelectorAll(".nav-item").forEach(function (el) {
+    el.addEventListener("click", function () { activateSection(el.getAttribute("data-section")); });
+  });
+
+  /* ── LOGOUT ── */
+  document.getElementById("admin-logout-btn").addEventListener("click", function () {
+    post("/api/admin/logout", {}).then(function () {
+      dashboard.style.display = "none";
+      loginScreen.style.display = "flex";
+      document.getElementById("admin-password").value = "";
+    });
+  });
+
+  /* ── LOGIN ── */
+  var loginErr = document.getElementById("login-error");
+  function doLogin() {
+    var pw = document.getElementById("admin-password").value;
+    loginErr.style.display = "none";
+    post("/api/admin/login", { password: pw })
+      .then(function () { loginScreen.style.display = "none"; dashboard.style.display = "block"; loadDashboard(); })
+      .catch(function (e) { loginErr.textContent = (e && e.error) || "Mot de passe incorrect."; loginErr.style.display = "block"; });
+  }
+  document.getElementById("admin-login-btn").addEventListener("click", doLogin);
+  document.getElementById("admin-password").addEventListener("keydown", function (e) { if (e.key === "Enter") doLogin(); });
+
+  /* ── DASHBOARD ── */
+  function loadDashboard() {
+    get("/api/books").then(function (books) { document.getElementById("stat-books").textContent = books.length; }).catch(function () {});
+    get("/api/admin/orders").then(function (orders) {
+      document.getElementById("stat-orders").textContent = orders.length;
+      var pending = orders.filter(function (o) { return o.status === "En attente"; }).length;
+      document.getElementById("stat-pending").textContent = pending;
+      var recent = orders.slice(0, 5);
+      document.getElementById("dashboard-orders").innerHTML = recent.length === 0
+        ? '<p style="color:#999;font-size:13px;">Aucune commande.</p>'
+        : recent.map(function (o) {
+          return '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #f4f4f4;">'
+            + '<div><strong style="font-size:14px;">#' + esc(o.id) + ' — ' + esc(o.customer_name) + '</strong><br><small style="color:#888;">' + esc(o.delivery_zone) + ' · ' + money(o.total_price) + '</small></div>'
+            + '<span class="order-status ' + statusClass(o.status) + '">' + esc(o.status) + '</span></div>';
+        }).join("");
+    }).catch(function () {});
+    get("/api/admin/ads").then(function (ads) { document.getElementById("stat-ads").textContent = ads.filter(function (a) { return a.active; }).length; }).catch(function () {});
+  }
+
+  /* ── BOOKS ── */
+  function clearBookForm() {
+    ["book-id","book-title","book-author","book-category","book-price","book-image","book-stock","book-description","book-infos"].forEach(function (id) { document.getElementById(id).value = ""; });
+    document.getElementById("book-featured").checked = false;
+    document.getElementById("book-form-title").textContent = "Ajouter un livre";
+    document.getElementById("book-save-btn").textContent = "Enregistrer le livre";
+  }
+  function bookPayload() {
+    return {
+      titre: document.getElementById("book-title").value,
+      auteur: document.getElementById("book-author").value,
+      genre: document.getElementById("book-category").value,
+      prix: document.getElementById("book-price").value,
+      image: document.getElementById("book-image").value,
+      stock: document.getElementById("book-stock").value || 10,
+      description: document.getElementById("book-description").value,
+      infos: document.getElementById("book-infos").value,
+      featured: document.getElementById("book-featured").checked
+    };
+  }
+  document.getElementById("book-reset-btn").addEventListener("click", function () { clearBookForm(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  document.getElementById("book-cancel-btn").addEventListener("click", clearBookForm);
+  document.getElementById("book-save-btn").addEventListener("click", function () {
+    var id = document.getElementById("book-id").value;
+    var action = id ? put("/api/books/" + id, bookPayload()) : post("/api/books", bookPayload());
+    action.then(function () { toast(id ? "Livre mis à jour." : "Livre ajouté."); clearBookForm(); loadBooks(); })
+      .catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
+  });
+
+  function loadBooks() {
+    get("/api/books").then(function (books) {
+      var count = document.getElementById("books-count");
+      if (count) count.textContent = "(" + books.length + ")";
+      var list = document.getElementById("admin-books-list");
+      if (books.length === 0) { list.innerHTML = '<p style="color:#999;font-size:13px;">Aucun livre dans le catalogue.</p>'; return; }
+      list.innerHTML = books.map(function (b) {
+        return '<div class="book-row">'
+          + '<img src="' + esc(b.image || "") + '" alt="" onerror="this.style.background=\'#f0f0f0\'">'
+          + '<div class="info"><strong>' + esc(b.titre) + '</strong><small>' + esc(b.auteur) + ' · ' + esc(b.genre) + ' · ' + money(b.prix) + (b.featured ? ' · ⭐ Vedette' : '') + '</small></div>'
+          + '<div class="actions"><button class="btn btn-secondary btn-sm" data-edit="' + b.id + '">Modifier</button><button class="btn btn-danger btn-sm" data-del="' + b.id + '">Supprimer</button></div>'
+          + '</div>';
+      }).join("");
+      list.querySelectorAll("[data-edit]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var b = books.find(function (x) { return String(x.id) === btn.getAttribute("data-edit"); });
+          if (!b) return;
+          document.getElementById("book-id").value = b.id;
+          document.getElementById("book-title").value = b.titre;
+          document.getElementById("book-author").value = b.auteur;
+          document.getElementById("book-category").value = b.genre;
+          document.getElementById("book-price").value = b.prix;
+          document.getElementById("book-image").value = b.image || "";
+          document.getElementById("book-stock").value = b.stock;
+          document.getElementById("book-description").value = b.description || "";
+          document.getElementById("book-infos").value = b.infos || "";
+          document.getElementById("book-featured").checked = !!b.featured;
+          document.getElementById("book-form-title").textContent = "Modifier : " + b.titre;
+          document.getElementById("book-save-btn").textContent = "Mettre à jour";
+          window.scrollTo({ top: 0, behavior: "smooth" });
+        });
+      });
+      list.querySelectorAll("[data-del]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          if (!confirm("Supprimer ce livre définitivement ?")) return;
+          del("/api/books/" + btn.getAttribute("data-del")).then(function () { toast("Livre supprimé."); loadBooks(); }).catch(function (e) { toast((e && e.error) || "Suppression impossible.", "error"); });
+        });
+      });
+    });
+  }
+
+  /* ── ORDERS ── */
+  var STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Annulée"];
+  document.getElementById("orders-refresh-btn").addEventListener("click", loadOrders);
+
+  function loadOrders() {
+    get("/api/admin/orders").then(function (orders) {
+      var list = document.getElementById("orders-list");
+      if (orders.length === 0) { list.innerHTML = '<div class="card"><p style="color:#999;font-size:13px;">Aucune commande.</p></div>'; return; }
+      list.innerHTML = orders.map(function (o) {
+        var itemsText = (o.items || []).map(function (i) { return esc(i.titre) + " x" + i.quantity; }).join(", ");
+        var opts = STATUSES.map(function (s) { return '<option value="' + s + '"' + (o.status === s ? " selected" : "") + '>' + s + '</option>'; }).join("");
+        return '<div class="order-card">'
+          + '<div class="order-header"><div class="order-id">Commande #' + esc(o.id) + ' — ' + esc(o.customer_name) + '</div><span class="order-status ' + statusClass(o.status) + '">' + esc(o.status) + '</span></div>'
+          + '<div class="order-info">📧 ' + esc(o.customer_email) + ' · 📍 ' + esc(o.delivery_zone) + ' · 💰 ' + money(o.total_price) + '</div>'
+          + (itemsText ? '<div class="order-items">🛒 ' + itemsText + '</div>' : '')
+          + '<div class="order-actions"><select data-order="' + o.id + '">' + opts + '</select><button class="btn btn-primary btn-sm" data-update="' + o.id + '">Mettre à jour</button></div>'
+          + '</div>';
+      }).join("");
+      list.querySelectorAll("[data-update]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var id = btn.getAttribute("data-update");
+          var sel = list.querySelector("select[data-order='" + id + "']");
+          put("/api/admin/orders/" + id + "/status", { status: sel.value })
+            .then(function () { toast("Statut mis à jour."); loadOrders(); })
+            .catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
+        });
+      });
+    });
+  }
+
+  /* ── ADS ── */
+  document.getElementById("ad-save-btn").addEventListener("click", function () {
+    post("/api/admin/ads", {
+      title: document.getElementById("ad-title").value,
+      message: document.getElementById("ad-message").value,
+      link: document.getElementById("ad-link").value,
+      active: true
+    }).then(function () {
+      toast("Publicité publiée.");
+      document.getElementById("ad-title").value = "";
+      document.getElementById("ad-message").value = "";
+      document.getElementById("ad-link").value = "";
+      loadAds();
+    }).catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
+  });
+
+  function loadAds() {
+    get("/api/admin/ads").then(function (ads) {
+      var list = document.getElementById("ads-list");
+      if (ads.length === 0) { list.innerHTML = '<p style="color:#999;font-size:13px;">Aucune publicité.</p>'; return; }
+      list.innerHTML = ads.map(function (a) {
+        return '<div class="ad-item"><div class="ad-info"><strong>' + esc(a.title) + '</strong><small>' + esc(a.message) + (a.link ? ' — <a href="' + esc(a.link) + '" target="_blank">Lien</a>' : '') + '</small></div>'
+          + '<button class="btn btn-danger btn-sm" data-ad-del="' + a.id + '">Supprimer</button></div>';
+      }).join("");
+      list.querySelectorAll("[data-ad-del]").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          del("/api/admin/ads/" + btn.getAttribute("data-ad-del")).then(function () { toast("Publicité supprimée."); loadAds(); });
+        });
+      });
+    });
+  }
+
+  /* ── INIT ── */
+  get("/api/admin/status").then(function (s) {
+    if (s.authenticated) { loginScreen.style.display = "none"; dashboard.style.display = "block"; loadDashboard(); }
+  }).catch(function () {});
+})();
+</script>
 </body>
 </html>

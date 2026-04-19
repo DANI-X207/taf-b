@@ -147,7 +147,7 @@ router.get("/api/ads", (req, res) => {
 });
 
 router.get("/api/source.zip", (req, res) => {
-  if (!isAuthenticated(req)) return res.redirect("/login.html");
+  if (!req.session.admin_authenticated) return res.status(403).json({ error: "Accès réservé à l'administrateur." });
   const excludedDirs = new Set([".git", ".cache", ".pythonlibs", "__pycache__", "node_modules", ".local"]);
   const excludedFiles = new Set(["data/bookstore.db"]);
   res.setHeader("Content-Type", "application/zip");
