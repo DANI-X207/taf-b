@@ -44,7 +44,8 @@
     if (p.indexOf("Ajout-Produit") !== -1) return "add";
     if (p.indexOf("PI_Produit") !== -1) return "detail";
     if (p.indexOf("MABOUTIQUE") !== -1) return "boutique";
-    if (p.indexOf("login") !== -1 || p.indexOf("connexion") !== -1 || p.indexOf("register") !== -1 || p.indexOf("inscription") !== -1) return "login";
+    if (p.indexOf("register") !== -1 || p.indexOf("inscription") !== -1) return "register";
+    if (p.indexOf("login") !== -1 || p.indexOf("connexion") !== -1) return "login";
     if (p.indexOf("Admin") !== -1) return "admin";
     return "other";
   }
@@ -437,6 +438,65 @@
     if (errorMsg) toast(decodeURIComponent(errorMsg), "error");
   }
 
+  function initRegister() {
+    var params = new URLSearchParams(window.location.search);
+    var errorMsg = params.get("error");
+    var errHtml = errorMsg
+      ? '<p style="background:#fee4e2;color:#b42318;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;">' + esc(decodeURIComponent(errorMsg)) + '</p>'
+      : '';
+
+    var fieldStyle = 'width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:3px;font-size:14px;background:#f4f4f4;color:#333;box-sizing:border-box;font-family:Arial,sans-serif;outline:none;';
+    var labelStyle = 'display:block;font-size:13px;color:#555;margin-bottom:6px;';
+
+    var shell = document.createElement("div");
+    shell.id = "magma-register-shell";
+    shell.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#e8e8e8;font-family:Arial,sans-serif;";
+    shell.innerHTML =
+      '<div style="display:flex;width:min(900px,96vw);min-height:520px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.22);">' +
+        '<div style="flex:1;position:relative;background:#2b293a;display:flex;flex-direction:column;justify-content:space-between;padding:36px 32px 40px;min-width:260px;">' +
+          '<div>' +
+            '<div style="width:54px;height:54px;margin-bottom:32px;"><img src="/img/Logo version mobile.png" alt="Logo" style="width:100%;height:100%;object-fit:contain;filter:brightness(0) invert(1);"></div>' +
+            '<h2 style="font-size:26px;font-weight:900;color:#fff;line-height:1.3;margin:0 0 12px;">Rejoignez<br>Librairie Magma</h2>' +
+            '<p style="color:rgba(255,255,255,.65);font-size:14px;line-height:1.6;margin:0;">Accédez à notre catalogue,<br>gérez votre panier et<br>suivez vos commandes.</p>' +
+          '</div>' +
+          '<div style="border-top:1px solid rgba(255,255,255,.15);padding-top:20px;">' +
+            '<p style="color:rgba(255,255,255,.5);font-size:12px;margin:0;">Déjà un compte ? <a href="/login.html" style="color:#ff690c;text-decoration:none;font-weight:700;">Se connecter</a></p>' +
+          '</div>' +
+        '</div>' +
+        '<div style="width:400px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;justify-content:center;padding:48px 40px;">' +
+          '<h1 style="font-size:26px;font-weight:700;color:#2b293a;margin:0 0 4px;">Créer un compte</h1>' +
+          '<p style="font-size:14px;color:#999;margin:0 0 28px;line-height:1.5;">Remplissez le formulaire pour commencer</p>' +
+          errHtml +
+          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Nom complet</label><input id="reg-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Adresse email</label><input id="reg-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:24px;"><label style="' + labelStyle + '">Mot de passe <span style="color:#aaa;font-size:11px;">(min. 8 caractères, lettre + chiffre)</span></label><input id="reg-password" type="password" autocomplete="new-password" style="' + fieldStyle + '"></div>' +
+          '<button id="reg-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:3px;cursor:pointer;letter-spacing:.3px;">Créer mon compte</button>' +
+          '<p style="margin-top:16px;font-size:12px;color:#aaa;text-align:center;">En créant un compte, vous acceptez nos conditions d\'utilisation.</p>' +
+        '</div>' +
+      '</div>';
+
+    document.body.appendChild(shell);
+
+    document.getElementById("reg-submit").addEventListener("click", function () {
+      var name = document.getElementById("reg-name").value.trim();
+      var email = document.getElementById("reg-email").value.trim();
+      var pass = document.getElementById("reg-password").value;
+      if (!name || !email || !pass) { toast("Veuillez remplir tous les champs.", "error"); return; }
+      post("/api/auth/register", { name: name, email: email, password: pass })
+        .then(function () { window.location.href = "/"; })
+        .catch(function (err) { toast((err && err.error) || "Inscription impossible.", "error"); });
+    });
+
+    ["reg-name", "reg-email", "reg-password"].forEach(function (id) {
+      var el = document.getElementById(id);
+      if (el) el.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") document.getElementById("reg-submit").click();
+      });
+    });
+
+    if (errorMsg) toast(decodeURIComponent(errorMsg), "error");
+  }
+
   function initLegacyAdd() {
     var btn = document.getElementById("A8");
     if (!btn) return;
@@ -454,6 +514,7 @@
     if (page === "cart") initCart();
     if (page === "detail") initDetail();
     if (page === "login") { initLogin(); return; }
+    if (page === "register") { initRegister(); return; }
     if (page === "admin" || page === "boutique") initAdmin();
     if (page === "add") initLegacyAdd();
   }
