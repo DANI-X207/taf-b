@@ -46,19 +46,32 @@ router.post("/auth/register", async (req, res) => {
 router.post("/auth/login", async (req, res) => {
   const data = req.body || {};
   try {
-    const email = cleanEmail(data.email);
+    const identifier = cleanText(data.email || data.username || data.identifier || "", 180, true);
     const password = String(data.password || "");
     const db = getDb();
-    const row = db.prepare("SELECT * FROM users WHERE email = ?").get(email);
-    if (!row || !(await bcrypt.compare(password, row.password_hash))) {
+    let matchedRow = null;
+    const isEmail = identifier.includes("@");
+    if (isEmail) {
+      const row = db.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?)").get(identifier);
+      if (row && await bcrypt.compare(password, row.password_hash)) matchedRow = row;
+    } else {
+      const candidates = db.prepare("SELECT * FROM users WHERE LOWER(name) = LOWER(?)").all(identifier);
+      for (const candidate of candidates) {
+        if (await bcrypt.compare(password, candidate.password_hash)) {
+          matchedRow = candidate;
+          break;
+        }
+      }
+    }
+    if (!matchedRow) {
       db.close();
-      const msg = "Email ou mot de passe incorrect.";
+      const msg = "Identifiant ou mot de passe incorrect.";
       if (req.is("json")) return res.status(401).json({ error: msg });
       return res.status(401).send(authPageHtml(msg));
     }
-    db.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").run(nowIso(), row.id);
+    db.prepare("UPDATE users SET last_login_at = ? WHERE id = ?").run(nowIso(), matchedRow.id);
     db.close();
-    req.session.user_id = row.id;
+    req.session.user_id = matchedRow.id;
     if (req.is("json")) return res.json({ success: true });
     return res.redirect("/");
   } catch (e) {

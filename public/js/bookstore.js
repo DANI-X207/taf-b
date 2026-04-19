@@ -404,7 +404,7 @@
           '<h1 style="font-size:32px;font-weight:400;color:#888;margin:0 0 8px;">Login</h1>' +
           '<p style="font-size:14px;color:#888;margin:0 0 28px;line-height:1.5;">Bienvenu entrer votre identifiant<br>s\'il vous plait</p>' +
           errHtml +
-          '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Nom d\'utilisateur</label><input id="login-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Nom d\'utilisateur ou Email</label><input id="login-email" type="text" autocomplete="username" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Mot de passe</label><input id="login-password" type="password" autocomplete="current-password" style="' + fieldStyle + '"></div>' +
           '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#555;margin-bottom:24px;"><input type="checkbox" id="remember-me" style="width:15px;height:15px;accent-color:#ff690c;cursor:pointer;"><label for="remember-me">Se souvenir de moi</label></div>' +
           '<button id="login-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:600;border:none;border-radius:3px;cursor:pointer;">Login</button>' +
