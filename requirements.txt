@@ -6,3 +6,8 @@ psycopg2-binary>=2.9.11
 reportlab>=4.4.10
 serverless-wsgi>=3.1.0
 werkzeug>=3.1.8
+email_validator
+flask
+flask-sqlalchemy
+gunicorn
+psycopg2-binary
