@@ -380,57 +380,42 @@
   function initLogin() {
     var params = new URLSearchParams(window.location.search);
     var errorMsg = params.get("error");
+    var errHtml = errorMsg
+      ? '<p style="background:#fee4e2;color:#b42318;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;">' + esc(decodeURIComponent(errorMsg)) + '</p>'
+      : '';
 
-    var inp = function (id, type, placeholder, autocomplete) {
-      return '<input id="' + id + '" type="' + type + '" placeholder="' + placeholder + '" autocomplete="' + autocomplete + '" style="width:100%;padding:12px 14px;margin:5px 0;border:1px solid #e0e0e0;border-radius:12px;font-size:15px;box-sizing:border-box;font-family:Arial,sans-serif;">';
-    };
-    var btn = function (id, label, dark) {
-      var bg = dark ? "#2b293a" : "#ff690c";
-      return '<button id="' + id + '" type="button" style="display:inline-block;background:' + bg + ';color:#fff;border:0;border-radius:999px;padding:12px 20px;font-size:15px;font-weight:700;cursor:pointer;margin-top:8px;font-family:Arial,sans-serif;">' + label + '</button>';
-    };
-    var errHtml = errorMsg ? '<p style="background:#fee4e2;color:#b42318;padding:11px 14px;border-radius:12px;margin:0 0 14px;font-size:14px;">' + esc(decodeURIComponent(errorMsg)) + '</p>' : '';
+    var fieldStyle = 'width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:3px;font-size:14px;background:#f0f0f0;color:#333;box-sizing:border-box;font-family:Arial,sans-serif;outline:none;';
+    var labelStyle = 'display:block;font-size:13px;color:#555;margin-bottom:6px;';
 
     var shell = document.createElement("div");
     shell.id = "magma-login-shell";
-    shell.style.cssText = "position:fixed;inset:0;z-index:9999;overflow-y:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 16px;box-sizing:border-box;font-family:Arial,sans-serif;background:linear-gradient(135deg,#ff690c 0%,#f59e0b 45%,#2b293a 100%);";
+    shell.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#e8e8e8;font-family:Arial,sans-serif;";
     shell.innerHTML =
-      '<div style="width:min(980px,100%)">' +
-        '<h1 style="margin:0 0 6px;font-size:34px;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,.3);">Librairie Magma</h1>' +
-        '<p style="margin:0 0 22px;color:rgba(255,255,255,.88);font-size:16px;">Créez un compte ou connectez-vous pour accéder au catalogue, au panier et aux commandes.</p>' +
-        errHtml +
-        '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:22px;">' +
-          '<section style="background:#fff;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.18);">' +
-            '<h2 style="margin:0 0 14px;color:#2b293a;font-size:20px;">Créer un compte</h2>' +
-            inp("reg-name", "text", "Nom complet", "name") +
-            inp("reg-email", "email", "Email", "email") +
-            inp("reg-password", "password", "Mot de passe (lettre + chiffre)", "new-password") +
-            btn("reg-submit", "Créer mon compte") +
-          '</section>' +
-          '<section style="background:#fff7ed;border:1px solid #fed7aa;border-radius:20px;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.18);">' +
-            '<h2 style="margin:0 0 14px;color:#2b293a;font-size:20px;">Déjà client</h2>' +
-            inp("login-email", "email", "Email", "email") +
-            inp("login-password", "password", "Mot de passe", "current-password") +
-            btn("login-submit", "Me connecter") +
-          '</section>' +
+      '<div style="display:flex;width:min(900px,96vw);min-height:480px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18);">' +
+        '<div style="flex:1;position:relative;background:url(\'/img/WhatsApp%20Image%202025-11-19%20at%2012.10.23.jpeg\') center center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-start;padding:28px 32px 32px;min-width:260px;">' +
+          '<div style="position:absolute;inset:0;background:rgba(30,40,30,.35);z-index:0;"></div>' +
+          '<div style="position:relative;z-index:1;">' +
+            '<div style="width:54px;height:54px;margin-bottom:28px;"><img src="/img/Logo version mobile.png" alt="Logo" style="width:100%;height:100%;object-fit:contain;"></div>' +
+            '<h2 style="font-size:28px;font-weight:900;color:#fff;line-height:1.25;letter-spacing:.3px;margin:0;">Connecter vous sur<br>Magma</h2>' +
+          '</div>' +
         '</div>' +
-        '<p style="margin:20px 0 0;display:flex;gap:12px;flex-wrap:wrap;">' +
-          btn("goto-admin", "Connexion Admin", true) +
-          '<a href="/api/source.zip" style="display:inline-block;background:#ff690c;color:#fff;text-decoration:none;border-radius:999px;padding:12px 20px;font-size:15px;font-weight:700;margin-top:8px;">Télécharger le code source</a>' +
-        '</p>' +
-        '<p style="margin:14px 0 0;color:rgba(255,255,255,.65);font-size:12px;">Session sécurisée : cookie HttpOnly, SameSite strict.</p>' +
+        '<div style="width:380px;flex-shrink:0;background:#f9f9f9;display:flex;flex-direction:column;justify-content:center;padding:48px 40px;">' +
+          '<h1 style="font-size:32px;font-weight:400;color:#888;margin:0 0 8px;">Login</h1>' +
+          '<p style="font-size:14px;color:#888;margin:0 0 28px;line-height:1.5;">Bienvenu entrer votre identifiant<br>s\'il vous plait</p>' +
+          errHtml +
+          '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Nom d\'utilisateur</label><input id="login-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Mot de passe</label><input id="login-password" type="password" autocomplete="current-password" style="' + fieldStyle + '"></div>' +
+          '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#555;margin-bottom:24px;"><input type="checkbox" id="remember-me" style="width:15px;height:15px;accent-color:#ff690c;cursor:pointer;"><label for="remember-me">Se souvenir de moi</label></div>' +
+          '<button id="login-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:600;border:none;border-radius:3px;cursor:pointer;">Login</button>' +
+          '<p style="margin-top:18px;font-size:13px;color:#888;text-align:center;">Pas encore de compte ? <a id="goto-register" href="#" style="color:#ff690c;text-decoration:none;font-weight:600;">Créer un compte</a></p>' +
+        '</div>' +
       '</div>';
 
     document.body.appendChild(shell);
 
-    document.getElementById("goto-admin").addEventListener("click", function () { window.location.href = "/Admin.html"; });
-
-    document.getElementById("reg-submit").addEventListener("click", function () {
-      post("/api/auth/register", {
-        name: document.getElementById("reg-name").value,
-        email: document.getElementById("reg-email").value,
-        password: document.getElementById("reg-password").value
-      }).then(function () { window.location.href = "/"; })
-        .catch(function (err) { toast((err && err.error) || "Inscription impossible.", "error"); });
+    document.getElementById("goto-register").addEventListener("click", function (e) {
+      e.preventDefault();
+      window.location.href = "/register.html";
     });
 
     document.getElementById("login-submit").addEventListener("click", function () {
@@ -442,13 +427,10 @@
         .catch(function (err) { toast((err && err.error) || "Email ou mot de passe incorrect.", "error"); });
     });
 
-    ["login-email", "login-password", "reg-name", "reg-email", "reg-password"].forEach(function (id) {
+    ["login-email", "login-password"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") {
-          if (id.startsWith("login")) document.getElementById("login-submit").click();
-          else document.getElementById("reg-submit").click();
-        }
+        if (e.key === "Enter") document.getElementById("login-submit").click();
       });
     });
 
