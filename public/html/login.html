@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Connexion — Librairie Magma</title>
+<title>login</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -25,6 +25,7 @@
     box-shadow: 0 8px 32px rgba(0,0,0,.18);
   }
 
+  /* ── LEFT PANEL ── */
   .panel-left {
     flex: 1;
     position: relative;
@@ -44,8 +45,16 @@
   }
   .panel-left > * { position: relative; z-index: 1; }
 
-  .logo-wrap { width: 54px; height: 54px; margin-bottom: 28px; }
-  .logo-wrap img { width: 100%; height: 100%; object-fit: contain; }
+  .logo-wrap {
+    width: 54px;
+    height: 54px;
+    margin-bottom: 28px;
+  }
+  .logo-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 
   .panel-left h2 {
     font-size: 28px;
@@ -55,8 +64,9 @@
     letter-spacing: .3px;
   }
 
+  /* ── RIGHT PANEL ── */
   .panel-right {
-    width: 400px;
+    width: 380px;
     flex-shrink: 0;
     background: #f9f9f9;
     display: flex;
@@ -65,119 +75,124 @@
     padding: 48px 40px;
   }
 
-  .panel-right h1 { font-size: 32px; font-weight: 400; color: #888; margin-bottom: 8px; }
-  .panel-right .subtitle { font-size: 14px; color: #888; margin-bottom: 28px; line-height: 1.5; }
+  .panel-right h1 {
+    font-size: 32px;
+    font-weight: 400;
+    color: #888;
+    margin-bottom: 8px;
+  }
 
-  .error-msg { background: #fee4e2; color: #b42318; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
-  .info-msg { background: #e0f2fe; color: #0369a1; padding: 10px 14px; border-radius: 6px; margin-bottom: 16px; font-size: 13px; }
+  .panel-right .subtitle {
+    font-size: 14px;
+    color: #888;
+    margin-bottom: 28px;
+    line-height: 1.5;
+  }
 
-  .field-group { margin-bottom: 18px; }
-  .field-group label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; }
+  .error-msg {
+    background: #fee4e2;
+    color: #b42318;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+  .info-msg {
+    background: #e0f2fe;
+    color: #0369a1;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 13px;
+  }
+
+  .field-group {
+    margin-bottom: 18px;
+  }
+
+  .field-group label {
+    display: block;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 6px;
+  }
+
   .field-group input {
-    width: 100%; padding: 10px 12px;
-    border: 1px solid #ccc; border-radius: 3px;
-    font-size: 14px; background: #f0f0f0; color: #333;
-    outline: none; transition: border-color .2s;
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    background: #f0f0f0;
+    color: #333;
+    outline: none;
+    transition: border-color .2s;
   }
-  .field-group input:focus { border-color: #ff690c; background: #fff; }
-
-  .remember { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #555; margin-bottom: 8px; }
-  .remember input[type="checkbox"] { width: 15px; height: 15px; accent-color: #ff690c; cursor: pointer; }
-
-  .forgot-link { text-align: right; margin-bottom: 20px; }
-  .forgot-link button {
-    background: none; border: none; color: #ff690c; font-size: 12px;
-    cursor: pointer; padding: 0; text-decoration: underline; font-family: Arial, sans-serif;
+  .field-group input:focus {
+    border-color: #ff690c;
+    background: #fff;
   }
-  .forgot-link button:hover { color: #e55a00; }
+
+  .remember {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 24px;
+  }
+  .remember input[type="checkbox"] {
+    width: 15px;
+    height: 15px;
+    accent-color: #ff690c;
+    cursor: pointer;
+  }
 
   .btn-login {
-    width: 100%; padding: 13px;
-    background: #ff690c; color: #fff;
-    font-size: 15px; font-weight: 600;
-    border: none; border-radius: 3px;
-    cursor: pointer; transition: background .2s;
+    width: 100%;
+    padding: 13px;
+    background: #ff690c;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: background .2s;
   }
   .btn-login:hover { background: #e55a00; }
 
-  .register-link { margin-top: 18px; font-size: 13px; color: #888; text-align: center; }
-  .register-link a { color: #ff690c; text-decoration: none; font-weight: 600; }
+  .register-link {
+    margin-top: 18px;
+    font-size: 13px;
+    color: #888;
+    text-align: center;
+  }
+  .register-link a {
+    color: #ff690c;
+    text-decoration: none;
+    font-weight: 600;
+  }
   .register-link a:hover { text-decoration: underline; }
 
   @media (max-width: 620px) {
     .panel-left { display: none; }
     .panel-right { width: 100%; padding: 40px 28px; }
   }
-
-  /* ── MODAL ── */
-  #forgot-modal {
-    position: fixed; inset: 0; z-index: 9999;
-    display: none; align-items: center; justify-content: center;
-    background: rgba(0,0,0,.55);
-  }
-  #forgot-modal.open { display: flex; }
-
-  .modal-box {
-    background: #fff; border-radius: 10px;
-    width: min(460px, 94vw); max-height: 90vh; overflow-y: auto;
-    box-shadow: 0 24px 80px rgba(0,0,0,.3);
-    padding: 0;
-  }
-  .modal-head {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 20px 24px; border-bottom: 1px solid #eee;
-  }
-  .modal-head h3 { font-size: 17px; font-weight: 700; color: #2b293a; }
-  .modal-close {
-    width: 30px; height: 30px; border: none; background: #f4f4f4;
-    border-radius: 50%; cursor: pointer; font-size: 16px; color: #666;
-    display: flex; align-items: center; justify-content: center;
-    transition: background .15s;
-  }
-  .modal-close:hover { background: #eee; }
-  .modal-body { padding: 24px; }
-  .modal-body p { font-size: 13px; color: #888; margin-bottom: 20px; line-height: 1.6; }
-  .modal-field { margin-bottom: 16px; }
-  .modal-field label { display: block; font-size: 12px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
-  .modal-field input {
-    width: 100%; padding: 10px 13px;
-    border: 1px solid #ddd; border-radius: 4px;
-    font-size: 14px; background: #fafafa; outline: none;
-    transition: border-color .2s; font-family: Arial, sans-serif;
-  }
-  .modal-field input:focus { border-color: #ff690c; background: #fff; }
-  .modal-err { background: #fee4e2; color: #b42318; padding: 10px 12px; border-radius: 6px; font-size: 13px; margin-bottom: 14px; }
-  .modal-ok { background: #ecfdf3; color: #166534; border: 1px solid #abefc6; padding: 16px; border-radius: 8px; margin-bottom: 14px; }
-  .modal-ok strong { display: block; font-size: 14px; margin-bottom: 8px; }
-  .modal-ok small { font-size: 12px; color: #888; }
-  .reset-link-box {
-    background: #f8f8f8; border: 1px solid #e0e0e0; border-radius: 6px;
-    padding: 12px 14px; margin: 10px 0;
-    word-break: break-all; font-size: 13px; font-family: monospace; color: #2b293a;
-  }
-  .reset-link-box a { color: #ff690c; }
-  .btn-submit {
-    width: 100%; padding: 12px;
-    background: #ff690c; color: #fff; border: none; border-radius: 4px;
-    font-size: 14px; font-weight: 700; cursor: pointer; transition: background .2s;
-    font-family: Arial, sans-serif;
-  }
-  .btn-submit:hover { background: #e55a00; }
-  .btn-submit:disabled { background: #ccc; cursor: not-allowed; }
-  .btn-new { margin-top: 12px; width: 100%; padding: 10px; background: #f4f4f4; color: #555; border: none; border-radius: 4px; font-size: 13px; cursor: pointer; font-family: Arial, sans-serif; }
-  .btn-new:hover { background: #e8e8e8; }
-
-  .timer-badge { display: inline-block; background: #fef9c3; color: #854d0e; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; margin-top: 8px; }
 </style>
 </head>
 <body>
 
 <div class="container">
+  <!-- LEFT -->
   <div class="panel-left">
-    <div class="logo-wrap"><img src="/img/Logo version mobile.png" alt="Logo Magma"></div>
+    <div class="logo-wrap">
+      <img src="/img/Logo version mobile.png" alt="Logo Magma">
+    </div>
     <h2>Connecter vous sur<br>Magma</h2>
   </div>
 
+  <!-- RIGHT -->
   <div class="panel-right">
     <h1>Login</h1>
     <p class="subtitle">Bienvenu entrer votre identifiant<br>s'il vous plait</p>
@@ -187,66 +202,20 @@
     <form id="login-form" method="post" action="/auth/login">
       <div class="field-group">
         <label for="email">Nom d'utilisateur ou Email</label>
-        <input type="text" id="email" name="email" required autocomplete="username email">
+        <input type="text" id="email" name="email" required autocomplete="username email" placeholder="">
       </div>
       <div class="field-group">
         <label for="password">Mot de passe</label>
-        <input type="password" id="password" name="password" required autocomplete="current-password">
+        <input type="password" id="password" name="password" required autocomplete="current-password" placeholder="">
       </div>
       <div class="remember">
         <input type="checkbox" id="remember" name="remember">
         <label for="remember">Se souvenir de moi</label>
       </div>
-      <div class="forgot-link">
-        <button type="button" id="open-forgot">Mot de passe oublié ?</button>
-      </div>
       <button type="submit" class="btn-login">Login</button>
     </form>
 
     <p class="register-link">Pas encore de compte ? <a href="/register.html">Créer un compte</a></p>
-  </div>
-</div>
-
-<!-- MOT DE PASSE OUBLIÉ -->
-<div id="forgot-modal">
-  <div class="modal-box">
-    <div class="modal-head">
-      <h3 id="forgot-title">Mot de passe oublié</h3>
-      <button class="modal-close" id="close-forgot">✕</button>
-    </div>
-    <div class="modal-body">
-      <!-- STEP 1: form -->
-      <div id="step-form">
-        <p>Renseignez les informations associées à votre compte. Tous les champs sont obligatoires.</p>
-        <div id="forgot-error" class="modal-err" style="display:none;"></div>
-        <div class="modal-field">
-          <label>Nom d'utilisateur</label>
-          <input type="text" id="fp-name" placeholder="Votre nom d'utilisateur" autocomplete="name">
-        </div>
-        <div class="modal-field">
-          <label>Numéro de téléphone</label>
-          <input type="tel" id="fp-phone" placeholder="Ex: +242 06 123 45 67" autocomplete="tel">
-        </div>
-        <div class="modal-field">
-          <label>Adresse email</label>
-          <input type="email" id="fp-email" placeholder="votre@email.com" autocomplete="email">
-        </div>
-        <button class="btn-submit" id="fp-submit">Vérifier mon identité</button>
-      </div>
-
-      <!-- STEP 2: success + link -->
-      <div id="step-link" style="display:none;">
-        <div class="modal-ok">
-          <strong>✅ Identité vérifiée avec succès</strong>
-          Votre lien de réinitialisation est prêt. Cliquez dessus pour définir un nouveau mot de passe.
-          <span class="timer-badge" id="timer-badge">⏱ Valide 15 minutes</span>
-        </div>
-        <p style="font-size:13px;color:#555;margin-bottom:8px;">Lien de réinitialisation :</p>
-        <div class="reset-link-box" id="reset-link-box"></div>
-        <button class="btn-submit" id="go-reset" style="margin-top:10px;">Réinitialiser mon mot de passe →</button>
-        <button class="btn-new" id="fp-restart">Nouvelle demande</button>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -267,99 +236,6 @@
     d2.className = "error-msg";
     d2.textContent = decodeURIComponent(err);
     container.appendChild(d2);
-  }
-
-  var modal = document.getElementById("forgot-modal");
-  var stepForm = document.getElementById("step-form");
-  var stepLink = document.getElementById("step-link");
-  var fpError = document.getElementById("forgot-error");
-  var resetLinkBox = document.getElementById("reset-link-box");
-  var goReset = document.getElementById("go-reset");
-  var timerBadge = document.getElementById("timer-badge");
-  var timerInterval = null;
-  var resetUrl = "";
-
-  document.getElementById("open-forgot").addEventListener("click", function () {
-    modal.classList.add("open");
-    stepForm.style.display = "block";
-    stepLink.style.display = "none";
-    fpError.style.display = "none";
-    document.getElementById("fp-name").value = "";
-    document.getElementById("fp-phone").value = "";
-    document.getElementById("fp-email").value = "";
-  });
-  document.getElementById("close-forgot").addEventListener("click", closeModal);
-  modal.addEventListener("click", function (e) { if (e.target === modal) closeModal(); });
-  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeModal(); });
-
-  function closeModal() {
-    modal.classList.remove("open");
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-  }
-
-  document.getElementById("fp-restart").addEventListener("click", function () {
-    stepLink.style.display = "none";
-    stepForm.style.display = "block";
-    fpError.style.display = "none";
-    if (timerInterval) { clearInterval(timerInterval); timerInterval = null; }
-  });
-
-  var submitBtn = document.getElementById("fp-submit");
-  submitBtn.addEventListener("click", function () {
-    var name = document.getElementById("fp-name").value.trim();
-    var phone = document.getElementById("fp-phone").value.trim();
-    var email = document.getElementById("fp-email").value.trim();
-    fpError.style.display = "none";
-    if (!name || !phone || !email) {
-      fpError.textContent = "Veuillez remplir les trois champs obligatoires.";
-      fpError.style.display = "block";
-      return;
-    }
-    submitBtn.disabled = true;
-    submitBtn.textContent = "Vérification…";
-    fetch("/api/auth/forgot-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name: name, phone: phone, email: email })
-    }).then(function (r) {
-      return r.json().then(function (d) {
-        if (!r.ok) throw d;
-        return d;
-      });
-    }).then(function (data) {
-      var origin = window.location.origin;
-      resetUrl = origin + "/reset-password.html?token=" + data.token;
-      resetLinkBox.innerHTML = '<a href="' + resetUrl + '" target="_blank">' + resetUrl + '</a>';
-      goReset.onclick = function () { window.location.href = resetUrl; };
-      stepForm.style.display = "none";
-      stepLink.style.display = "block";
-      startTimer(data.expires_in_minutes * 60);
-    }).catch(function (e) {
-      fpError.textContent = (e && e.error) || "Erreur lors de la vérification.";
-      fpError.style.display = "block";
-    }).finally(function () {
-      submitBtn.disabled = false;
-      submitBtn.textContent = "Vérifier mon identité";
-    });
-  });
-
-  function startTimer(seconds) {
-    var end = Date.now() + seconds * 1000;
-    if (timerInterval) clearInterval(timerInterval);
-    function tick() {
-      var left = Math.max(0, Math.round((end - Date.now()) / 1000));
-      var m = Math.floor(left / 60);
-      var s = left % 60;
-      timerBadge.textContent = "⏱ Expire dans " + m + "m " + (s < 10 ? "0" : "") + s + "s";
-      if (left === 0) {
-        clearInterval(timerInterval);
-        timerBadge.textContent = "⌛ Lien expiré";
-        timerBadge.style.background = "#fee4e2";
-        timerBadge.style.color = "#b42318";
-      }
-    }
-    tick();
-    timerInterval = setInterval(tick, 1000);
   }
 })();
 </script>
