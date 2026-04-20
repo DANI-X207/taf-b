@@ -205,4 +205,39 @@ router.get("/api/orders/:id/receipt.pdf", (req, res) => {
   generateReceiptPdf(order, items, res);
 });
 
+router.post("/api/orders/:id/confirm-reception", requireUser(), (req, res) => {
+  const db = getDb();
+  const orderId = parseInt(req.params.id);
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  if (!order) { db.close(); return res.status(404).json({ error: "Commande non trouvée." }); }
+  if (!userCanAccessOrder(req, order)) { db.close(); return res.status(403).json({ error: "Accès à cette commande refusé." }); }
+  if (order.client_confirmed) { db.close(); return res.status(400).json({ error: "Réception déjà confirmée." }); }
+  if (!["En livraison", "Livrée"].includes(order.status)) {
+    db.close();
+    return res.status(400).json({ error: "La commande doit être en livraison ou livrée pour confirmer la réception." });
+  }
+  const now = nowIso();
+  db.prepare("UPDATE orders SET client_confirmed = 1, updated_at = ? WHERE id = ?").run(now, orderId);
+  const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  if (updated.admin_confirmed && updated.client_confirmed && updated.status !== "Validée") {
+    db.prepare("UPDATE orders SET status = 'Validée', validated_at = ?, updated_at = ? WHERE id = ?").run(now, now, orderId);
+  }
+  const final = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId);
+  db.close();
+  res.json(rowToOrder(final, items));
+});
+
+router.get("/api/my-orders", requireUser(), (req, res) => {
+  const user = getCurrentUser(req);
+  const db = getDb();
+  const orders = db.prepare("SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC").all(user.id);
+  const result = orders.map((row) => {
+    const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(row.id);
+    return rowToOrder(row, items);
+  });
+  db.close();
+  res.json(result);
+});
+
 module.exports = { router, ORDER_STATUSES };

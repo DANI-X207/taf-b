@@ -106,6 +106,10 @@ function initDb() {
   addColumnIfMissing(db, "orders", "user_id", "INTEGER REFERENCES users(id)");
   addColumnIfMissing(db, "orders", "tracking_token", "TEXT DEFAULT ''");
   addColumnIfMissing(db, "orders", "updated_at", "TEXT DEFAULT ''");
+  addColumnIfMissing(db, "orders", "admin_confirmed", "INTEGER DEFAULT 0");
+  addColumnIfMissing(db, "orders", "client_confirmed", "INTEGER DEFAULT 0");
+  addColumnIfMissing(db, "orders", "validated_at", "TEXT");
+  addColumnIfMissing(db, "users", "is_active", "INTEGER DEFAULT 1");
   addColumnIfMissing(db, "reviews", "user_id", "INTEGER REFERENCES users(id)");
 
   const bookCount = db.prepare("SELECT COUNT(*) as c FROM books").get().c;
@@ -146,9 +150,9 @@ function initDb() {
   }
 
   db.exec(`
-    UPDATE orders SET status = 'Confirmée' WHERE status IN ('validated', 'confirmed');
+    UPDATE orders SET status = 'Confirmée' WHERE status IN ('confirmed');
     UPDATE orders SET status = 'Annulée' WHERE status = 'cancelled';
-    UPDATE orders SET status = 'En attente' WHERE status NOT IN ('En attente', 'Confirmée', 'En livraison', 'Livrée', 'Annulée');
+    UPDATE orders SET status = 'En attente' WHERE status NOT IN ('En attente', 'Confirmée', 'En livraison', 'Livrée', 'Annulée', 'Validée');
   `);
   db.prepare("UPDATE orders SET tracking_token = lower(hex(randomblob(16))) WHERE tracking_token IS NULL OR tracking_token = ''").run();
   db.prepare("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL OR updated_at = ''").run();

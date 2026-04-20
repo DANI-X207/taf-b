@@ -20,6 +20,17 @@ function rowToOrder(row, items = []) {
   return order;
 }
 
+function tryValidateOrder(db, orderId) {
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  if (!order) return order;
+  if (order.admin_confirmed && order.client_confirmed && order.status !== "Validée") {
+    const now = nowIso();
+    db.prepare("UPDATE orders SET status = 'Validée', validated_at = ?, updated_at = ? WHERE id = ?").run(now, now, orderId);
+    return db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  }
+  return order;
+}
+
 router.get("/api/admin/status", (req, res) => {
   res.json({ authenticated: !!req.session.admin_authenticated });
 });
@@ -44,14 +55,29 @@ router.post("/api/admin/logout", (req, res) => {
 router.get("/api/admin/users", requireAdmin(), (req, res) => {
   const db = getDb();
   const users = db.prepare(
-    "SELECT id, name, email, created_at, last_login_at FROM users ORDER BY id DESC"
+    "SELECT id, name, email, created_at, last_login_at, is_active FROM users ORDER BY id DESC"
   ).all();
-  const withOrders = users.map((u) => {
-    const orderCount = db.prepare("SELECT COUNT(*) as cnt FROM orders WHERE user_id = ?").get(u.id);
-    return { ...u, order_count: orderCount ? orderCount.cnt : 0 };
+  const withDetails = users.map((u) => {
+    const orderRow = db.prepare("SELECT COUNT(*) as cnt, COALESCE(SUM(total),0) as total_spent FROM orders WHERE user_id = ?").get(u.id);
+    return {
+      ...u,
+      is_active: u.is_active === undefined ? 1 : u.is_active,
+      order_count: orderRow ? orderRow.cnt : 0,
+      total_spent: orderRow ? orderRow.total_spent : 0,
+    };
   });
   db.close();
-  res.json(withOrders);
+  res.json(withDetails);
+});
+
+router.put("/api/admin/users/:id/toggle-status", requireAdmin(), (req, res) => {
+  const db = getDb();
+  const user = db.prepare("SELECT id, is_active FROM users WHERE id = ?").get(parseInt(req.params.id));
+  if (!user) { db.close(); return res.status(404).json({ error: "Utilisateur non trouvé." }); }
+  const newActive = user.is_active ? 0 : 1;
+  db.prepare("UPDATE users SET is_active = ? WHERE id = ?").run(newActive, user.id);
+  db.close();
+  res.json({ success: true, is_active: newActive });
 });
 
 router.delete("/api/admin/users/:id", requireAdmin(), (req, res) => {
@@ -76,14 +102,23 @@ router.put("/api/admin/orders/:id/status", requireAdmin(), (req, res) => {
   const data = req.body || {};
   const status = cleanText(data.status, 40, true);
   if (!ORDER_STATUSES.includes(status))
-    return res.status(400).json({ error: "Statut invalide. Utilisez : En attente, Confirmée, En livraison, Livrée." });
+    return res.status(400).json({ error: "Statut invalide." });
   const db = getDb();
-  const result = db.prepare("UPDATE orders SET status = ?, updated_at = ? WHERE id = ?").run(status, nowIso(), parseInt(req.params.id));
-  if (result.changes === 0) { db.close(); return res.status(404).json({ error: "Commande non trouvée" }); }
-  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(parseInt(req.params.id));
-  const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(parseInt(req.params.id));
+  const orderId = parseInt(req.params.id);
+  const now = nowIso();
+
+  const adminConfirmed = status === "Livrée" ? 1 : (status === "En attente" ? 0 : undefined);
+  if (adminConfirmed !== undefined) {
+    db.prepare("UPDATE orders SET status = ?, admin_confirmed = ?, updated_at = ? WHERE id = ?").run(status, adminConfirmed, now, orderId);
+  } else {
+    db.prepare("UPDATE orders SET status = ?, updated_at = ? WHERE id = ?").run(status, now, orderId);
+  }
+
+  const updatedOrder = tryValidateOrder(db, orderId);
+  if (!updatedOrder) { db.close(); return res.status(404).json({ error: "Commande non trouvée." }); }
+  const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId);
   db.close();
-  res.json(rowToOrder(order, items));
+  res.json(rowToOrder(updatedOrder, items));
 });
 
 router.post("/api/admin/orders/:id/status", requireAdmin(), (req, res, next) => {

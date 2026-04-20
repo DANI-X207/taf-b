@@ -248,6 +248,72 @@
     }
 
     render();
+
+    var myOrdersSection = document.createElement("section");
+    myOrdersSection.id = "magma-my-orders";
+    myOrdersSection.style.cssText = "max-width:980px;margin:28px auto 40px;padding:24px;background:#fff;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.10);font-family:Arial,sans-serif;";
+    document.body.appendChild(myOrdersSection);
+
+    function renderMyOrders() {
+      myOrdersSection.innerHTML = '<h2 style="margin-bottom:18px;">Mes commandes</h2>';
+      get("/api/my-orders").then(function (orders) {
+        if (!orders || orders.length === 0) {
+          myOrdersSection.innerHTML += '<p style="color:#888;font-size:14px;">Vous n\'avez pas encore passé de commande.</p>';
+          return;
+        }
+        var statusColor = { "En attente":"#854d0e", "Confirmée":"#166534", "En livraison":"#1e40af", "Livrée":"#5b21b6", "Annulée":"#b42318", "Validée":"#065f46" };
+        var statusBg = { "En attente":"#fef9c3", "Confirmée":"#dcfce7", "En livraison":"#dbeafe", "Livrée":"#ede9fe", "Annulée":"#fee4e2", "Validée":"#d1fae5" };
+        orders.forEach(function (o) {
+          var card = document.createElement("div");
+          card.style.cssText = "border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:14px;background:#fafafa;";
+          var bg = statusBg[o.status] || "#f3f4f6";
+          var col = statusColor[o.status] || "#555";
+          var itemsList = (o.items || []).map(function (i) {
+            return '<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid #f0f0f0;">'
+              + (i.image ? '<img src="' + esc(i.image) + '" style="width:38px;height:50px;object-fit:cover;border-radius:5px;background:#eee;" onerror="this.style.display=\'none\'">' : '')
+              + '<div style="flex:1;"><span style="font-weight:600;">' + esc(i.titre) + '</span><br><span style="color:#888;font-size:12px;">' + esc(i.auteur) + ' · ' + esc(i.qty) + ' ex. · ' + money(i.prix) + '</span></div></div>';
+          }).join("");
+          var canConfirm = !o.client_confirmed && ["En livraison", "Livrée"].includes(o.status);
+          card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px;">'
+            + '<div><strong style="font-size:15px;">Commande #' + esc(o.id) + '</strong><div style="font-size:12px;color:#888;margin-top:3px;">' + fmtDate(o.created_at) + ' · ' + money(o.total) + '</div></div>'
+            + '<span style="background:' + bg + ';color:' + col + ';padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">' + esc(o.status) + '</span>'
+            + '</div>'
+            + (itemsList ? '<div style="margin:0 0 12px;">' + itemsList + '</div>' : '')
+            + '<div style="font-size:13px;color:#666;margin-bottom:10px;">📍 ' + esc(o.delivery_zone) + (o.delivery_address ? ' — ' + esc(o.delivery_address) : '') + '</div>'
+            + (o.client_confirmed ? '<div style="font-size:12px;padding:6px 12px;background:#dcfce7;color:#166534;border-radius:999px;display:inline-block;margin-bottom:8px;">✓ Vous avez confirmé la réception</div>' : '')
+            + (canConfirm ? '<div><button class="confirm-btn" data-oid="' + o.id + '" style="background:#ff690c;color:#fff;border:0;border-radius:999px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;">Confirmer la réception</button><p style="font-size:11px;color:#888;margin-top:5px;">Confirmez que vous avez bien reçu votre commande. Cela validera définitivement la commande.</p></div>' : '')
+            + (o.status === "Annulée" && o.cancelled_at ? '<div style="font-size:12px;color:#b42318;">Annulée le ' + fmtDate(o.cancelled_at) + '</div>' : '')
+            + (o.status === "Validée" && o.validated_at ? '<div style="font-size:12px;color:#065f46;margin-top:4px;">✅ Commande validée le ' + fmtDate(o.validated_at) + '</div>' : '');
+
+          myOrdersSection.appendChild(card);
+        });
+
+        myOrdersSection.querySelectorAll(".confirm-btn").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var oid = btn.getAttribute("data-oid");
+            btn.disabled = true;
+            btn.textContent = "Envoi…";
+            post("/api/orders/" + oid + "/confirm-reception", {})
+              .then(function (updated) {
+                toast(updated.status === "Validée" ? "Réception confirmée — Commande validée !" : "Réception confirmée.");
+                renderMyOrders();
+              })
+              .catch(function (e) { toast((e && e.error) || "Erreur lors de la confirmation.", "error"); btn.disabled = false; btn.textContent = "Confirmer la réception"; });
+          });
+        });
+      }).catch(function () {
+        myOrdersSection.innerHTML += '<p style="color:#888;font-size:14px;">Connectez-vous pour voir vos commandes.</p>';
+      });
+    }
+
+    renderMyOrders();
+  }
+
+  function fmtDate(s) {
+    if (!s) return "—";
+    var d = new Date(s.indexOf("T") !== -1 ? s : s + "Z");
+    if (isNaN(d)) return s;
+    return d.toLocaleDateString("fr-FR", { day:"2-digit", month:"2-digit", year:"numeric", hour:"2-digit", minute:"2-digit" });
   }
 
   function initDetail() {
