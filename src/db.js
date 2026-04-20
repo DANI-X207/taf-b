@@ -99,6 +99,16 @@ function initDb() {
       active INTEGER DEFAULT 1,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
 
   addColumnIfMissing(db, "books", "infos", "TEXT DEFAULT ''");
@@ -110,6 +120,7 @@ function initDb() {
   addColumnIfMissing(db, "orders", "client_confirmed", "INTEGER DEFAULT 0");
   addColumnIfMissing(db, "orders", "validated_at", "TEXT");
   addColumnIfMissing(db, "users", "is_active", "INTEGER DEFAULT 1");
+  addColumnIfMissing(db, "users", "phone", "TEXT DEFAULT ''");
   addColumnIfMissing(db, "reviews", "user_id", "INTEGER REFERENCES users(id)");
 
   const bookCount = db.prepare("SELECT COUNT(*) as c FROM books").get().c;
@@ -156,6 +167,8 @@ function initDb() {
   `);
   db.prepare("UPDATE orders SET tracking_token = lower(hex(randomblob(16))) WHERE tracking_token IS NULL OR tracking_token = ''").run();
   db.prepare("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL OR updated_at = ''").run();
+
+  db.exec("DELETE FROM password_reset_tokens WHERE expires_at < datetime('now')");
 
   db.close();
 }

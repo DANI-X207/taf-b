@@ -27,6 +27,7 @@ const PAGE_TITLES = {
 
 const PROTECTED_PAGES = new Set(["index.html", "PAGEMOD-Accueil.html", "PI_Produit.html", "Mon-panier.html", "Formulaire.html"]);
 const AUTH_PAGES = new Set(["login.html", "connexion.html", "register.html", "inscription.html"]);
+const NO_BOOKSTORE_PAGES = new Set(["login.html", "connexion.html", "register.html", "inscription.html", "reset-password.html", "Admin.html"]);
 
 const HEAD_COMPAT = `<script>
 window.clWDUtil = new Proxy(window.clWDUtil || {}, {
@@ -124,7 +125,7 @@ function serveHtml(filename, req, res) {
   if (!content.includes("magma-fixes.css")) {
     content = content.replace("</head>", '<link rel="stylesheet" type="text/css" href="/magma-fixes.css"></head>');
   }
-  if (!content.includes("/js/bookstore.js")) {
+  if (!content.includes("/js/bookstore.js") && !NO_BOOKSTORE_PAGES.has(filename)) {
     content = content.replace("</body>", '<script src="/js/bookstore.js"></script></body>');
   }
   res.type("html").send(content);
