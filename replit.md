@@ -57,9 +57,10 @@ package.json               ← Dépendances Node.js
   - Statut commande modifiable depuis le modal de détail.
   - Source ZIP via `/api/source.zip` protégé admin uniquement (`req.session.admin_authenticated`).
 - Connexion accepte email OU nom d'utilisateur (champ unique `email` envoyé).
+- Mot de passe oublié : modal de triple vérification (nom, téléphone, email), token sécurisé expirant en 15 minutes, page `/reset-password?token=...`, hash bcrypt et fermeture de session après réinitialisation.
 - Si compte déjà existant lors de l'inscription → redirection vers `/login.html?info=…`.
 - Déconnexion vide la session complète + efface le cookie `magma_sid`.
-- Avis clients : note 1–5 et commentaire par livre.
+- Avis clients : note 1–5 et commentaire par livre via `/api/reviews`, réponse JSON explicite et ajout immédiat dans la section Avis récents.
 
 ## Zone de livraison
 Livraison autorisée uniquement pour : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU.

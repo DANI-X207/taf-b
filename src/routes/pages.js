@@ -83,6 +83,7 @@ ${msg}
 <form method="post" action="/auth/register">
 <input name="name" placeholder="Nom complet" required maxlength="120" autocomplete="name">
 <input name="email" type="email" placeholder="Email" required maxlength="180" autocomplete="email">
+<input name="phone" placeholder="Numéro de téléphone" required maxlength="40" autocomplete="tel">
 <input name="password" type="password" placeholder="Mot de passe avec lettre et chiffre" required minlength="8" autocomplete="new-password">
 <button type="submit">Créer mon compte</button>
 </form>
@@ -94,6 +95,7 @@ ${msg}
 <input name="password" type="password" placeholder="Mot de passe" required autocomplete="current-password">
 <button type="submit">Me connecter</button>
 </form>
+<p class="small"><a href="#" id="forgot-password-link">Mot de passe oublié</a></p>
 </section>
 </div>
 <p><a class="link admin" href="/Admin.html">Connexion Admin</a> <a class="link" href="/api/source.zip">Télécharger le code source</a></p>

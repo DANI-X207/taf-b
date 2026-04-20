@@ -32,6 +32,10 @@ function cleanPhone(value) {
   return phone;
 }
 
+function normalizePhone(value) {
+  return String(value || "").replace(/[^\d+]/g, "");
+}
+
 function cleanUrl(value, maxLen = 700) {
   const url = cleanText(value, maxLen);
   if (!url) return "";
@@ -61,4 +65,4 @@ function rowToBook(row) {
   };
 }
 
-module.exports = { cleanText, cleanInt, cleanEmail, cleanPassword, cleanPhone, cleanUrl, escapeHtml, rowToBook };
+module.exports = { cleanText, cleanInt, cleanEmail, cleanPassword, cleanPhone, normalizePhone, cleanUrl, escapeHtml, rowToBook };

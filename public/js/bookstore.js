@@ -37,6 +37,10 @@
     return Number(value || 0).toLocaleString("fr-FR") + " FCFA";
   }
 
+  function renderReview(review) {
+    return '<p><strong>' + esc(review.customer_name) + '</strong> — ' + '★'.repeat(Number(review.rating) || 0) + '<br>' + esc(review.comment) + '</p>';
+  }
+
   function pageName() {
     var p = window.location.pathname;
     if (p === "/" || p.indexOf("index") !== -1) return "home";
@@ -325,17 +329,27 @@
     section.style.cssText = "max-width:920px;margin:30px auto;padding:18px;background:#fff;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.12);font-family:Arial,sans-serif;";
     document.body.appendChild(section);
     get("/api/books/" + id).then(function (book) {
-      section.innerHTML = '<h2>' + esc(book.titre) + '</h2><p><strong>' + esc(book.auteur) + '</strong> — ' + esc(book.genre) + '</p><p>' + esc(book.description || "") + '</p><p>' + esc(book.infos || "") + '</p><h3>' + money(book.prix) + '</h3><button id="detail-add" type="button" style="background:#ff690c;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer;">Ajouter au panier</button><hr><h3>Avis clients</h3><div id="review-list"></div><div><input id="review-name" placeholder="Votre nom" style="padding:9px;margin:4px;width:180px;"><select id="review-rating" style="padding:9px;margin:4px;"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select><input id="review-comment" placeholder="Votre commentaire" style="padding:9px;margin:4px;width:260px;"><button id="review-submit" type="button">Publier</button></div>';
+      section.innerHTML = '<h2>' + esc(book.titre) + '</h2><p><strong>' + esc(book.auteur) + '</strong> — ' + esc(book.genre) + '</p><p>' + esc(book.description || "") + '</p><p>' + esc(book.infos || "") + '</p><h3>' + money(book.prix) + '</h3><button id="detail-add" type="button" style="background:#ff690c;color:#fff;border:0;border-radius:999px;padding:10px 16px;font-weight:700;cursor:pointer;">Ajouter au panier</button><hr><h3>Avis récents</h3><div id="review-list"></div><div><input id="review-name" placeholder="Votre nom" style="padding:9px;margin:4px;width:180px;"><select id="review-rating" style="padding:9px;margin:4px;"><option>5</option><option>4</option><option>3</option><option>2</option><option>1</option></select><input id="review-comment" placeholder="Votre commentaire" style="padding:9px;margin:4px;width:260px;"><button id="review-submit" type="button">Publier</button></div>';
       document.getElementById("detail-add").addEventListener("click", function () {
         post("/api/cart/add", { id: Number(id), qty: 1 }).then(function () { updateCartBadge(); toast("Livre ajouté au panier."); });
       });
       function loadReviews() {
         get("/api/books/" + id + "/reviews").then(function (reviews) {
-          document.getElementById("review-list").innerHTML = reviews.length ? reviews.map(function (r) { return '<p><strong>' + esc(r.customer_name) + '</strong> — ' + '★'.repeat(r.rating) + '<br>' + esc(r.comment) + '</p>'; }).join("") : '<p>Aucun avis pour ce livre.</p>';
+          document.getElementById("review-list").innerHTML = reviews.length ? reviews.map(renderReview).join("") : '<p>Aucun avis pour ce livre.</p>';
         });
       }
       document.getElementById("review-submit").addEventListener("click", function () {
-        post("/api/reviews", { book_id: Number(id), customer_name: document.getElementById("review-name").value, rating: document.getElementById("review-rating").value, comment: document.getElementById("review-comment").value }).then(function () { toast("Avis publié."); loadReviews(); }).catch(function (error) { toast(error.error || "Avis impossible.", "error"); });
+        post("/api/reviews", { book_id: Number(id), customer_name: document.getElementById("review-name").value, rating: document.getElementById("review-rating").value, comment: document.getElementById("review-comment").value }).then(function (response) {
+          var list = document.getElementById("review-list");
+          if (response.review) {
+            if (list.textContent.indexOf("Aucun avis") !== -1) list.innerHTML = "";
+            list.insertAdjacentHTML("afterbegin", renderReview(response.review));
+          } else {
+            loadReviews();
+          }
+          document.getElementById("review-comment").value = "";
+          toast(response.message || "Avis enregistré");
+        }).catch(function (error) { toast(error.error || "Avis impossible.", "error"); });
       });
       loadReviews();
     });
@@ -474,6 +488,7 @@
           '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Mot de passe</label><input id="login-password" type="password" autocomplete="current-password" style="' + fieldStyle + '"></div>' +
           '<div style="display:flex;align-items:center;gap:8px;font-size:13px;color:#555;margin-bottom:24px;"><input type="checkbox" id="remember-me" style="width:15px;height:15px;accent-color:#ff690c;cursor:pointer;"><label for="remember-me">Se souvenir de moi</label></div>' +
           '<button id="login-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:600;border:none;border-radius:3px;cursor:pointer;">Login</button>' +
+          '<p style="margin-top:14px;font-size:13px;color:#888;text-align:center;"><a id="forgot-password" href="#" style="color:#ff690c;text-decoration:none;font-weight:600;">Mot de passe oublié</a></p>' +
           '<p style="margin-top:18px;font-size:13px;color:#888;text-align:center;">Pas encore de compte ? <a id="goto-register" href="#" style="color:#ff690c;text-decoration:none;font-weight:600;">Créer un compte</a></p>' +
         '</div>' +
       '</div>';
@@ -483,6 +498,11 @@
     document.getElementById("goto-register").addEventListener("click", function (e) {
       e.preventDefault();
       window.location.href = "/register.html";
+    });
+
+    document.getElementById("forgot-password").addEventListener("click", function (e) {
+      e.preventDefault();
+      openForgotPasswordModal(fieldStyle, labelStyle);
     });
 
     document.getElementById("login-submit").addEventListener("click", function () {
@@ -535,6 +555,7 @@
           errHtml +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Nom complet</label><input id="reg-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Adresse email</label><input id="reg-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Numéro de téléphone</label><input id="reg-phone" type="tel" autocomplete="tel" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:24px;"><label style="' + labelStyle + '">Mot de passe <span style="color:#aaa;font-size:11px;">(min. 8 caractères, lettre + chiffre)</span></label><input id="reg-password" type="password" autocomplete="new-password" style="' + fieldStyle + '"></div>' +
           '<button id="reg-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:3px;cursor:pointer;letter-spacing:.3px;">Créer mon compte</button>' +
           '<p style="margin-top:16px;font-size:12px;color:#aaa;text-align:center;">En créant un compte, vous acceptez nos conditions d\'utilisation.</p>' +
@@ -546,9 +567,10 @@
     document.getElementById("reg-submit").addEventListener("click", function () {
       var name = document.getElementById("reg-name").value.trim();
       var email = document.getElementById("reg-email").value.trim();
+      var phone = document.getElementById("reg-phone").value.trim();
       var pass = document.getElementById("reg-password").value;
-      if (!name || !email || !pass) { toast("Veuillez remplir tous les champs.", "error"); return; }
-      fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email, password: pass }) })
+      if (!name || !email || !phone || !pass) { toast("Veuillez remplir tous les champs.", "error"); return; }
+      fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email, phone: phone, password: pass }) })
         .then(function (r) {
           return r.json().then(function (d) {
             if (r.status === 409) {
@@ -563,7 +585,7 @@
         .catch(function (err) { toast((err && err.error) || "Inscription impossible.", "error"); });
     });
 
-    ["reg-name", "reg-email", "reg-password"].forEach(function (id) {
+    ["reg-name", "reg-email", "reg-phone", "reg-password"].forEach(function (id) {
       var el = document.getElementById(id);
       if (el) el.addEventListener("keydown", function (e) {
         if (e.key === "Enter") document.getElementById("reg-submit").click();
@@ -571,6 +593,50 @@
     });
 
     if (errorMsg) toast(decodeURIComponent(errorMsg), "error");
+  }
+
+  function openForgotPasswordModal(fieldStyle, labelStyle) {
+    var old = document.getElementById("forgot-password-modal");
+    if (old) old.remove();
+    var overlay = document.createElement("div");
+    overlay.id = "forgot-password-modal";
+    overlay.style.cssText = "position:fixed;inset:0;z-index:1000000;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;padding:20px;box-sizing:border-box;font-family:Arial,sans-serif;";
+    overlay.innerHTML =
+      '<div style="width:min(420px,100%);background:#fff;border-radius:6px;box-shadow:0 8px 32px rgba(0,0,0,.22);padding:28px;box-sizing:border-box;">' +
+        '<h2 style="font-size:24px;font-weight:400;color:#888;margin:0 0 8px;">Mot de passe oublié</h2>' +
+        '<p style="font-size:13px;color:#888;margin:0 0 18px;line-height:1.5;">Entrez les trois informations de votre compte.</p>' +
+        '<div id="forgot-error" style="display:none;background:#fee4e2;color:#b42318;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;"></div>' +
+        '<div id="forgot-success" style="display:none;background:#ecfdf3;color:#1f7a4d;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;word-break:break-word;"></div>' +
+        '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Nom</label><input id="forgot-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
+        '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Numéro de téléphone</label><input id="forgot-phone" type="tel" autocomplete="tel" style="' + fieldStyle + '"></div>' +
+        '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Email</label><input id="forgot-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
+        '<button id="forgot-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:600;border:none;border-radius:3px;cursor:pointer;">Vérifier</button>' +
+        '<button id="forgot-close" type="button" style="width:100%;padding:11px;background:#2b293a;color:#fff;font-size:14px;font-weight:600;border:none;border-radius:3px;cursor:pointer;margin-top:10px;">Fermer</button>' +
+      '</div>';
+    document.body.appendChild(overlay);
+    document.getElementById("forgot-close").addEventListener("click", function () { overlay.remove(); });
+    overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
+    document.getElementById("forgot-submit").addEventListener("click", function () {
+      var errorBox = document.getElementById("forgot-error");
+      var successBox = document.getElementById("forgot-success");
+      errorBox.style.display = "none";
+      successBox.style.display = "none";
+      var name = document.getElementById("forgot-name").value.trim();
+      var phone = document.getElementById("forgot-phone").value.trim();
+      var email = document.getElementById("forgot-email").value.trim();
+      if (!name || !phone || !email) {
+        errorBox.textContent = "Nom, numéro de téléphone et email sont obligatoires.";
+        errorBox.style.display = "block";
+        return;
+      }
+      post("/api/auth/forgot-password", { name: name, phone: phone, email: email }).then(function (data) {
+        successBox.innerHTML = esc(data.message || "Lien généré.") + '<br><a href="' + esc(data.resetLink) + '" style="color:#1f7a4d;font-weight:700;">' + esc(data.resetLink) + '</a>';
+        successBox.style.display = "block";
+      }).catch(function (err) {
+        errorBox.textContent = (err && err.error) || "Informations incorrectes.";
+        errorBox.style.display = "block";
+      });
+    });
   }
 
   function initLegacyAdd() {
@@ -583,9 +649,9 @@
   }
 
   function init() {
-    addAdminLink();
-    updateCartBadge();
     var page = pageName();
+    addAdminLink();
+    if (page !== "login" && page !== "register") updateCartBadge();
     if (page === "home") initHome();
     if (page === "cart") initCart();
     if (page === "detail") initDetail();

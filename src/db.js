@@ -30,6 +30,7 @@ function initDb() {
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
       email TEXT NOT NULL UNIQUE,
+      phone TEXT DEFAULT '',
       password_hash TEXT NOT NULL,
       created_at TEXT NOT NULL,
       last_login_at TEXT
@@ -99,6 +100,16 @@ function initDb() {
       active INTEGER DEFAULT 1,
       created_at TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS password_reset_tokens (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      token TEXT NOT NULL UNIQUE,
+      expires_at TEXT NOT NULL,
+      used_at TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(user_id) REFERENCES users(id)
+    );
   `);
 
   addColumnIfMissing(db, "books", "infos", "TEXT DEFAULT ''");
@@ -109,6 +120,7 @@ function initDb() {
   addColumnIfMissing(db, "orders", "admin_confirmed", "INTEGER DEFAULT 0");
   addColumnIfMissing(db, "orders", "client_confirmed", "INTEGER DEFAULT 0");
   addColumnIfMissing(db, "orders", "validated_at", "TEXT");
+  addColumnIfMissing(db, "users", "phone", "TEXT DEFAULT ''");
   addColumnIfMissing(db, "users", "is_active", "INTEGER DEFAULT 1");
   addColumnIfMissing(db, "reviews", "user_id", "INTEGER REFERENCES users(id)");
 
