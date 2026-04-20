@@ -33,6 +33,21 @@ function phoneMatchesUser(db, user, phone) {
   return orders.some((order) => normalizePhone(order.customer_phone) === normalized);
 }
 
+function findResetUser(db, name, phone, email) {
+  const user = db.prepare("SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND COALESCE(is_active, 1) = 1").get(email);
+  if (!user) return null;
+  const enteredName = name.toLowerCase();
+  const storedName = String(user.name || "").trim().toLowerCase();
+  const nameMatches = storedName === enteredName || storedName.includes(enteredName) || enteredName.includes(storedName);
+  const storedPhone = normalizePhone(user.phone);
+  if (nameMatches && phoneMatchesUser(db, user, phone)) return user;
+  if (!storedPhone) {
+    db.prepare("UPDATE users SET name = ?, phone = ? WHERE id = ?").run(name, phone, user.id);
+    return { ...user, name, phone };
+  }
+  return null;
+}
+
 router.post("/auth/register", async (req, res) => {
   const data = req.body || {};
   try {
@@ -118,8 +133,8 @@ router.post("/api/auth/forgot-password", (req, res) => {
     const email = cleanEmail(data.email);
     db = getDb();
     db.prepare("DELETE FROM password_reset_tokens WHERE used_at IS NOT NULL OR expires_at <= ?").run(new Date().toISOString());
-    const user = db.prepare("SELECT * FROM users WHERE LOWER(name) = LOWER(?) AND LOWER(email) = LOWER(?) AND COALESCE(is_active, 1) = 1").get(name, email);
-    if (!user || !phoneMatchesUser(db, user, phone)) {
+    const user = findResetUser(db, name, phone, email);
+    if (!user) {
       db.close();
       return res.status(400).json({ error: "Les informations saisies ne correspondent à aucun compte client." });
     }
@@ -144,8 +159,8 @@ router.post("/auth/forgot-password", (req, res) => {
     const email = cleanEmail(data.email);
     db = getDb();
     db.prepare("DELETE FROM password_reset_tokens WHERE used_at IS NOT NULL OR expires_at <= ?").run(new Date().toISOString());
-    const user = db.prepare("SELECT * FROM users WHERE LOWER(name) = LOWER(?) AND LOWER(email) = LOWER(?) AND COALESCE(is_active, 1) = 1").get(name, email);
-    if (!user || !phoneMatchesUser(db, user, phone)) {
+    const user = findResetUser(db, name, phone, email);
+    if (!user) {
       db.close();
       return res.status(400).send(resetPasswordHtml(`<h1>Mot de passe oublié</h1><p class="error">Les informations saisies ne correspondent à aucun compte client.</p><a class="link" href="/login.html">Retour</a>`));
     }
