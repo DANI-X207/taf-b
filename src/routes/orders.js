@@ -120,9 +120,9 @@ router.post("/api/orders", requireUser(), async (req, res) => {
   try {
     const customer_name = cleanText(data.customer_name || (user || {}).name, 140, true);
     const customer_email = cleanEmail(data.customer_email || (user || {}).email);
-    const customer_phone = cleanPhone(data.customer_phone || (user || {}).phone);
+    const customer_phone = cleanPhone(data.customer_phone);
     const delivery_zone = cleanText(data.delivery_zone, 120, true);
-    const delivery_address = cleanText(data.delivery_address || delivery_zone, 260, true);
+    const delivery_address = cleanText(data.delivery_address, 260, true);
     if (!ALLOWED_DELIVERY_ZONES.includes(delivery_zone))
       return res.status(400).json({ error: "Livraison impossible : cette adresse est hors zone. Zones autorisées : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU." });
 
