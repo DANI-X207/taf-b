@@ -25,7 +25,7 @@ const PAGE_TITLES = {
   Admin: `${SITE_NAME} — Admin`,
 };
 
-const PROTECTED_PAGES = new Set(["index.html", "PAGEMOD-Accueil.html", "PI_Produit.html", "Mon-panier.html", "Formulaire.html"]);
+const PROTECTED_PAGES = new Set(["index.html", "PAGEMOD-Accueil.html", "PI_Produit.html", "Mon-panier.html", "Formulaire.html", "mon-compte.html", "mes-commandes.html"]);
 const AUTH_PAGES = new Set(["login.html", "connexion.html", "register.html", "inscription.html"]);
 
 const HEAD_COMPAT = `<script>

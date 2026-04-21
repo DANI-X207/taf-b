@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Librairie Magma — Mon Compte</title>
+<link rel="stylesheet" href="/magma-fixes.css">
+<style>
+body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3f1f1); font-family:'Trebuchet MS',Arial,sans-serif; color:#2d2d2d; }
+.mc-wrap { max-width:780px; margin:60px auto; padding:0 18px; }
+.mc-back { display:inline-flex; align-items:center; gap:6px; background:#2b293a; color:#fff; text-decoration:none; padding:10px 18px; border-radius:999px; font-weight:700; font-size:.9rem; margin-bottom:18px; }
+.mc-back:hover { background:#3a3850; }
+.mc-card { background:#fff; border-radius:18px; padding:32px; box-shadow:0 18px 60px rgba(0,0,0,.12); }
+.mc-card h1 { margin:0 0 6px; color:#2b293a; font-size:1.8rem; }
+.mc-card .sub { color:#888; font-size:.9rem; margin-bottom:24px; }
+.mc-avatar { width:72px; height:72px; border-radius:50%; background:#ff690c; color:#fff; display:flex; align-items:center; justify-content:center; font-size:1.8rem; font-weight:700; margin-bottom:18px; }
+.mc-list { list-style:none; padding:0; margin:0; }
+.mc-list li { display:flex; justify-content:space-between; gap:14px; padding:14px 0; border-bottom:1px solid #eee; }
+.mc-list li:last-child { border-bottom:0; }
+.mc-list .lbl { color:#888; font-size:.85rem; }
+.mc-list .val { color:#2b293a; font-weight:600; text-align:right; word-break:break-word; }
+.mc-loading, .mc-error { color:#888; padding:14px; text-align:center; }
+.mc-error { color:#b42318; }
+</style>
+</head>
+<body>
+<div class="mc-wrap">
+  <a href="/" class="mc-back">← Retour à l'accueil</a>
+  <div class="mc-card" id="mc-card">
+    <div class="mc-loading">Chargement…</div>
+  </div>
+</div>
+<script>
+(function() {
+  function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+  function fmtDate(s){if(!s)return"—";var d=new Date(s.indexOf("T")!==-1?s:s+"Z");return isNaN(d)?s:d.toLocaleDateString("fr-FR",{day:"2-digit",month:"long",year:"numeric"});}
+  fetch("/api/auth/status").then(function(r){return r.json();}).then(function(data){
+    var card=document.getElementById("mc-card");
+    if(!data.authenticated||!data.user){card.innerHTML='<p class="mc-error">Vous n\'êtes pas connecté. <a href="/login.html">Se connecter</a></p>';return;}
+    var u=data.user;
+    var initial=(u.name||u.email||"?").charAt(0).toUpperCase();
+    card.innerHTML='<div class="mc-avatar">'+esc(initial)+'</div>'+
+      '<h1>'+esc(u.name||"Mon compte")+'</h1>'+
+      '<p class="sub">Vos informations personnelles enregistrées sur Librairie Magma.</p>'+
+      '<ul class="mc-list">'+
+        '<li><span class="lbl">Nom complet</span><span class="val">'+esc(u.name||"—")+'</span></li>'+
+        '<li><span class="lbl">Email</span><span class="val">'+esc(u.email||"—")+'</span></li>'+
+        '<li><span class="lbl">Téléphone</span><span class="val">'+esc(u.phone||"—")+'</span></li>'+
+        '<li><span class="lbl">Date d\'inscription</span><span class="val">'+esc(fmtDate(u.created_at))+'</span></li>'+
+      '</ul>';
+  }).catch(function(){
+    document.getElementById("mc-card").innerHTML='<p class="mc-error">Impossible de charger les informations du compte.</p>';
+  });
+})();
+</script>
+</body>
+</html>

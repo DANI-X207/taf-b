@@ -692,9 +692,107 @@
     });
   }
 
+  function applyTheme() {
+    try {
+      var t = localStorage.getItem("magma-theme") || "light";
+      document.documentElement.setAttribute("data-magma-theme", t);
+    } catch (e) {}
+  }
+
+  function openSettingsModal() {
+    var existing = document.getElementById("magma-settings-modal");
+    if (existing) { existing.remove(); return; }
+    var theme = "light";
+    var notif = "1";
+    try { theme = localStorage.getItem("magma-theme") || "light"; notif = localStorage.getItem("magma-notif") || "1"; } catch (e) {}
+    var modal = document.createElement("div");
+    modal.id = "magma-settings-modal";
+    modal.innerHTML =
+      '<div class="ms-overlay"></div>' +
+      '<div class="ms-box" role="dialog" aria-modal="true" aria-labelledby="ms-title">' +
+        '<header><h3 id="ms-title">Paramètres</h3><button type="button" class="ms-close" aria-label="Fermer">✕</button></header>' +
+        '<div class="ms-body">' +
+          '<div class="ms-field"><label>Thème d\'affichage</label>' +
+            '<div class="ms-segmented">' +
+              '<button type="button" data-theme="light" class="' + (theme==="light"?"on":"") + '">☀ Clair</button>' +
+              '<button type="button" data-theme="dark" class="' + (theme==="dark"?"on":"") + '">🌙 Sombre</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="ms-field ms-toggle-row"><label for="ms-notif">Notifications</label>' +
+            '<label class="ms-switch"><input type="checkbox" id="ms-notif" ' + (notif==="1"?"checked":"") + '><span></span></label>' +
+          '</div>' +
+          '<div class="ms-field"><label>Compte</label>' +
+            '<a class="ms-link" href="/mon-compte.html">Mon Compte</a>' +
+            '<a class="ms-link" href="/mes-commandes.html">Mes Commandes</a>' +
+          '</div>' +
+        '</div>' +
+        '<footer><button type="button" class="ms-save">Enregistrer</button></footer>' +
+      '</div>';
+    document.body.appendChild(modal);
+    function close() { modal.remove(); }
+    modal.querySelector(".ms-overlay").addEventListener("click", close);
+    modal.querySelector(".ms-close").addEventListener("click", close);
+    modal.querySelectorAll(".ms-segmented button").forEach(function (b) {
+      b.addEventListener("click", function () {
+        modal.querySelectorAll(".ms-segmented button").forEach(function (x) { x.classList.remove("on"); });
+        b.classList.add("on");
+      });
+    });
+    modal.querySelector(".ms-save").addEventListener("click", function () {
+      var t = (modal.querySelector(".ms-segmented button.on") || {}).getAttribute && modal.querySelector(".ms-segmented button.on").getAttribute("data-theme") || "light";
+      var n = modal.querySelector("#ms-notif").checked ? "1" : "0";
+      try { localStorage.setItem("magma-theme", t); localStorage.setItem("magma-notif", n); } catch (e) {}
+      applyTheme();
+      toast("Paramètres enregistrés.");
+      close();
+    });
+  }
+
+  function wireHomeIcons() {
+    var account = document.getElementById("A87");
+    var cart = document.getElementById("A85");
+    var question = document.getElementById("dzA88") || document.getElementById("A88");
+    if (account) {
+      account.style.cursor = "pointer";
+      account.setAttribute("title", "Mon Compte");
+      account.onclick = function (e) { e.preventDefault(); window.location.href = "/mon-compte.html"; };
+      var wrap = account.closest(".dzSpan"); if (wrap) wrap.style.cursor = "pointer";
+    }
+    if (cart) {
+      cart.style.cursor = "pointer";
+      cart.setAttribute("title", "Mes Commandes");
+      cart.onclick = function (e) { e.preventDefault(); window.location.href = "/mes-commandes.html"; };
+      var wrap2 = cart.closest(".dzSpan"); if (wrap2) wrap2.style.cursor = "pointer";
+    }
+    if (question) {
+      var qWrap = question.closest ? (question.closest(".pos16") || question.closest(".dzSpan") || question) : question;
+      qWrap.style.display = "none";
+    }
+    if (!document.getElementById("magma-settings-icon")) {
+      var qSlot = document.getElementById("dzA88");
+      var settings = document.createElement("button");
+      settings.id = "magma-settings-icon";
+      settings.type = "button";
+      settings.title = "Paramètres";
+      settings.setAttribute("aria-label", "Paramètres");
+      settings.innerHTML = "⚙";
+      if (qSlot && qSlot.parentNode) {
+        qSlot.parentNode.style.display = "";
+        qSlot.style.display = "none";
+        var host = qSlot.parentNode;
+        host.appendChild(settings);
+      } else {
+        document.body.appendChild(settings);
+      }
+      settings.addEventListener("click", openSettingsModal);
+    }
+  }
+
   function init() {
+    applyTheme();
     var page = pageName();
     addAdminLink();
+    if (page === "home") wireHomeIcons();
     if (page !== "login" && page !== "register") updateCartBadge();
     if (page === "home") initHome();
     if (page === "cart") initCart();
