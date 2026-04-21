@@ -197,46 +197,90 @@
     function render() {
       get("/api/cart").then(function (cart) {
         var total = cart.reduce(function (sum, item) { return sum + item.prix * item.qty; }, 0);
-        container.innerHTML = '<h2>Mon panier</h2>';
+        var totalQty = cart.reduce(function (s, i) { return s + Number(i.qty || 0); }, 0);
+        container.classList.add("magma-cart");
+        container.innerHTML = '<header class="magma-cart__head"><h2>Mon panier</h2><span class="magma-cart__count">' + totalQty + ' article' + (totalQty > 1 ? 's' : '') + '</span></header>';
         if (!cart.length) {
-          container.innerHTML += '<p>Votre panier est vide.</p>';
+          container.innerHTML += '<div class="magma-cart__empty"><p>Votre panier est vide.</p><a href="/MABOUTIQUE.html" class="magma-cart__shopbtn">Découvrir le catalogue</a></div>';
           return;
         }
+        var list = document.createElement("div");
+        list.className = "magma-cart__list";
         cart.forEach(function (item) {
-          var row = document.createElement("div");
-          row.style.cssText = "display:flex;align-items:center;gap:12px;border-bottom:1px solid #eee;padding:12px 0;";
-          row.innerHTML = '<img src="' + esc(item.image || "") + '" style="width:62px;height:82px;object-fit:cover;border-radius:8px;background:#eee;">' +
-            '<div style="flex:1;"><strong>' + esc(item.titre) + '</strong><br><span style="color:#777;">' + esc(item.auteur) + '</span><br><span>' + money(item.prix) + ' x ' + item.qty + '</span></div>' +
-            '<button type="button" data-id="' + item.id + '" style="border:0;background:#b42318;color:#fff;border-radius:999px;padding:8px 12px;cursor:pointer;">Supprimer</button>';
+          var subtotal = item.prix * item.qty;
+          var row = document.createElement("article");
+          row.className = "magma-cart__row";
+          row.innerHTML =
+            '<img class="magma-cart__img" src="' + esc(item.image || "") + '" alt="' + esc(item.titre) + '" onerror="this.style.visibility=\'hidden\'">' +
+            '<div class="magma-cart__info">' +
+              '<h3 class="magma-cart__title">' + esc(item.titre) + '</h3>' +
+              '<p class="magma-cart__author">' + esc(item.auteur) + '</p>' +
+              '<p class="magma-cart__qty">Quantité : <strong>' + item.qty + '</strong></p>' +
+            '</div>' +
+            '<div class="magma-cart__pricecol">' +
+              '<span class="magma-cart__unit">' + money(item.prix) + ' / unité</span>' +
+              '<strong class="magma-cart__sub">' + money(subtotal) + '</strong>' +
+            '</div>' +
+            '<button type="button" class="magma-cart__remove" data-id="' + item.id + '" aria-label="Supprimer ' + esc(item.titre) + '">✕</button>';
           row.querySelector("button").addEventListener("click", function () {
             del("/api/cart/remove/" + item.id).then(function () { updateCartBadge(); render(); });
           });
-          container.appendChild(row);
+          list.appendChild(row);
         });
-        container.innerHTML += '<h3>Total : ' + money(total) + '</h3><div id="magma-checkout"></div>';
+        container.appendChild(list);
+        var totalBlock = document.createElement("div");
+        totalBlock.className = "magma-cart__totalblock";
+        totalBlock.innerHTML = '<span class="magma-cart__totallabel">Total à payer</span><span class="magma-cart__totalvalue">' + money(total) + '</span>';
+        container.appendChild(totalBlock);
+        var co = document.createElement("div");
+        co.id = "magma-checkout";
+        container.appendChild(co);
         renderCheckout();
       });
     }
 
     function renderCheckout() {
       var checkout = document.getElementById("magma-checkout");
-      get("/api/delivery-zones").then(function (zones) {
-        checkout.innerHTML = '<h3>Passer commande</h3>' +
-          '<p style="color:#7a271a;background:#fff2e8;border:1px solid #fed7aa;padding:10px;border-radius:10px;">Livraison uniquement : Potopoto la gare → Total vers Saint Exupérie, Présidence, OSH, CHU. Hors zone, achat impossible.</p>' +
-          '<input id="co-name" placeholder="Nom complet" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;">' +
-          '<input id="co-email" placeholder="Email" type="email" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;">' +
-          '<input id="co-phone" placeholder="Téléphone" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;">' +
-          '<select id="co-zone" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;"><option value="">Choisir la zone de livraison</option>' + zones.map(function (z) { return '<option value="' + esc(z) + '">' + esc(z) + '</option>'; }).join("") + '</select>' +
-          '<textarea id="co-address" placeholder="Adresse précise / repère" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;min-height:80px;"></textarea>' +
-          '<button id="co-submit" type="button" style="background:#ff690c;color:#fff;border:0;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer;">Valider la commande</button>' +
-          '<div id="co-result" style="margin-top:12px;"></div>';
+      Promise.all([
+        get("/api/delivery-zones"),
+        get("/api/auth/status").catch(function () { return { user: null }; })
+      ]).then(function (results) {
+        var zones = results[0];
+        var user = (results[1] && results[1].user) || {};
+        var hasName = !!user.name;
+        var hasEmail = !!user.email;
+        var hasPhone = !!user.phone;
+        var missing = [];
+        if (!hasName) missing.push("nom");
+        if (!hasEmail) missing.push("email");
+        if (!hasPhone) missing.push("téléphone");
+        var profileBlock = '<div class="magma-co__profile">' +
+          '<h4>Vos informations</h4>' +
+          '<dl>' +
+            '<dt>Nom</dt><dd>' + (hasName ? esc(user.name) : '<em>Non renseigné</em>') + '</dd>' +
+            '<dt>Email</dt><dd>' + (hasEmail ? esc(user.email) : '<em>Non renseigné</em>') + '</dd>' +
+            '<dt>Téléphone</dt><dd>' + (hasPhone ? esc(user.phone) : '<em>Non renseigné</em>') + '</dd>' +
+          '</dl>' +
+          (missing.length ? '<p class="magma-co__warn">Veuillez compléter votre ' + missing.join(", ") + ' ci-dessous pour valider la commande.</p>' : '') +
+        '</div>';
+        var phoneFallback = hasPhone ? '' : '<input id="co-phone" placeholder="Téléphone" class="magma-co__field">';
+        checkout.className = "magma-co";
+        checkout.innerHTML = '<h3 class="magma-co__title">Passer commande</h3>' +
+          '<p class="magma-co__notice">Livraison uniquement : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU. Hors zone, achat impossible.</p>' +
+          profileBlock +
+          '<label class="magma-co__label" for="co-zone">Zone de livraison</label>' +
+          '<select id="co-zone" class="magma-co__field"><option value="">Choisir la zone de livraison</option>' + zones.map(function (z) { return '<option value="' + esc(z) + '">' + esc(z) + '</option>'; }).join("") + '</select>' +
+          phoneFallback +
+          '<button id="co-submit" type="button" class="magma-co__submit">Valider la commande</button>' +
+          '<div id="co-result" class="magma-co__result"></div>';
         document.getElementById("co-submit").addEventListener("click", function () {
+          var phoneVal = hasPhone ? user.phone : (document.getElementById("co-phone") || {}).value;
           post("/api/orders", {
-            customer_name: document.getElementById("co-name").value,
-            customer_email: document.getElementById("co-email").value,
-            customer_phone: document.getElementById("co-phone").value,
+            customer_name: user.name || "",
+            customer_email: user.email || "",
+            customer_phone: phoneVal || "",
             delivery_zone: document.getElementById("co-zone").value,
-            delivery_address: document.getElementById("co-address").value
+            delivery_address: user.name ? ("Compte: " + user.name) : "Livraison à domicile"
           }).then(function (res) {
             updateCartBadge();
             document.getElementById("co-result").innerHTML = '<div style="background:#ecfdf3;border:1px solid #abefc6;padding:12px;border-radius:12px;color:#067647;">Commande validée #' + res.order.id + '. <a href="' + res.receipt_url + '">Télécharger le reçu PDF</a><br><button type="button" id="cancel-order" style="margin-top:8px;">Annuler dans les 5 minutes</button></div>';
