@@ -190,53 +190,93 @@
     if (!container) {
       container = document.createElement("section");
       container.id = "magma-cart";
-      container.style.cssText = "max-width:980px;margin:80px auto 30px;padding:20px;background:#fff;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.12);font-family:Arial,sans-serif;";
+      container.style.cssText = "max-width:980px;margin:80px auto 30px;padding:24px;background:#fff;border-radius:18px;box-shadow:0 18px 60px rgba(0,0,0,.12);font-family:Arial,sans-serif;";
       document.body.appendChild(container);
     }
 
     function render() {
       get("/api/cart").then(function (cart) {
         var total = cart.reduce(function (sum, item) { return sum + item.prix * item.qty; }, 0);
-        container.innerHTML = '<h2>Mon panier</h2>';
+        var totalQty = cart.reduce(function (sum, item) { return sum + Number(item.qty || 0); }, 0);
+        container.innerHTML =
+          '<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 18px;">' +
+            '<h2 style="margin:0;color:#2b293a;font-size:24px;">Mon panier</h2>' +
+            '<span style="background:#fff2e8;color:#7a271a;padding:6px 14px;border-radius:999px;font-size:13px;font-weight:700;">' + totalQty + ' article' + (totalQty > 1 ? 's' : '') + '</span>' +
+          '</div>';
         if (!cart.length) {
-          container.innerHTML += '<p>Votre panier est vide.</p>';
+          container.innerHTML += '<div style="text-align:center;padding:40px 20px;color:#888;background:#fafafa;border-radius:14px;border:1px dashed #e5e5e5;">' +
+            '<div style="font-size:38px;margin-bottom:10px;">🛒</div>' +
+            '<p style="margin:0;font-size:15px;">Votre panier est vide.</p>' +
+            '<a href="/index.html" style="display:inline-block;margin-top:16px;background:#ff690c;color:#fff;text-decoration:none;padding:10px 20px;border-radius:999px;font-weight:700;font-size:13px;">Découvrir le catalogue</a>' +
+            '</div>';
           return;
         }
+
+        var list = document.createElement("div");
+        list.style.cssText = "display:flex;flex-direction:column;gap:10px;";
+
         cart.forEach(function (item) {
+          var subtotal = item.prix * item.qty;
           var row = document.createElement("div");
-          row.style.cssText = "display:flex;align-items:center;gap:12px;border-bottom:1px solid #eee;padding:12px 0;";
-          row.innerHTML = '<img src="' + esc(item.image || "") + '" style="width:62px;height:82px;object-fit:cover;border-radius:8px;background:#eee;">' +
-            '<div style="flex:1;"><strong>' + esc(item.titre) + '</strong><br><span style="color:#777;">' + esc(item.auteur) + '</span><br><span>' + money(item.prix) + ' x ' + item.qty + '</span></div>' +
-            '<button type="button" data-id="' + item.id + '" style="border:0;background:#b42318;color:#fff;border-radius:999px;padding:8px 12px;cursor:pointer;">Supprimer</button>';
+          row.style.cssText = "display:grid;grid-template-columns:72px 1fr auto auto;align-items:center;gap:14px;padding:14px;background:#fafafa;border:1px solid #efefef;border-radius:14px;transition:background .15s;";
+          row.onmouseenter = function () { row.style.background = "#f5f5f5"; };
+          row.onmouseleave = function () { row.style.background = "#fafafa"; };
+          row.innerHTML =
+            '<img src="' + esc(item.image || "") + '" style="width:72px;height:96px;object-fit:cover;border-radius:10px;background:#eee;" onerror="this.style.visibility=\'hidden\'">' +
+            '<div style="min-width:0;">' +
+              '<strong style="display:block;color:#2b293a;font-size:15px;line-height:1.3;margin-bottom:4px;">' + esc(item.titre) + '</strong>' +
+              '<span style="display:block;color:#888;font-size:13px;margin-bottom:6px;">' + esc(item.auteur) + '</span>' +
+              '<span style="display:inline-block;background:#fff;border:1px solid #eee;color:#555;font-size:12px;padding:3px 10px;border-radius:999px;">' + money(item.prix) + ' × ' + item.qty + '</span>' +
+            '</div>' +
+            '<div style="text-align:right;min-width:110px;"><strong style="color:#ff690c;font-size:16px;">' + money(subtotal) + '</strong></div>' +
+            '<button type="button" data-id="' + item.id + '" title="Supprimer" aria-label="Supprimer" style="border:0;background:transparent;color:#b42318;cursor:pointer;padding:8px;border-radius:8px;font-size:18px;line-height:1;transition:background .15s;" onmouseover="this.style.background=\'#fee4e2\'" onmouseout="this.style.background=\'transparent\'">✕</button>';
           row.querySelector("button").addEventListener("click", function () {
             del("/api/cart/remove/" + item.id).then(function () { updateCartBadge(); render(); });
           });
-          container.appendChild(row);
+          list.appendChild(row);
         });
-        container.innerHTML += '<h3>Total : ' + money(total) + '</h3><div id="magma-checkout"></div>';
+        container.appendChild(list);
+
+        var totalBox = document.createElement("div");
+        totalBox.style.cssText = "display:flex;justify-content:space-between;align-items:center;margin-top:18px;padding:16px 18px;background:#2b293a;color:#fff;border-radius:14px;";
+        totalBox.innerHTML = '<span style="font-size:14px;color:rgba(255,255,255,.75);font-weight:600;">Total à payer</span><strong style="font-size:22px;color:#ff9a4d;">' + money(total) + '</strong>';
+        container.appendChild(totalBox);
+
+        var checkoutDiv = document.createElement("div");
+        checkoutDiv.id = "magma-checkout";
+        checkoutDiv.style.cssText = "margin-top:20px;";
+        container.appendChild(checkoutDiv);
         renderCheckout();
       });
     }
 
     function renderCheckout() {
       var checkout = document.getElementById("magma-checkout");
-      get("/api/delivery-zones").then(function (zones) {
-        checkout.innerHTML = '<h3>Passer commande</h3>' +
-          '<p style="color:#7a271a;background:#fff2e8;border:1px solid #fed7aa;padding:10px;border-radius:10px;">Livraison uniquement : Potopoto la gare → Total vers Saint Exupérie, Présidence, OSH, CHU. Hors zone, achat impossible.</p>' +
-          '<input id="co-name" placeholder="Nom complet" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;">' +
-          '<input id="co-email" placeholder="Email" type="email" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;">' +
-          '<input id="co-phone" placeholder="Téléphone" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;">' +
-          '<select id="co-zone" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;"><option value="">Choisir la zone de livraison</option>' + zones.map(function (z) { return '<option value="' + esc(z) + '">' + esc(z) + '</option>'; }).join("") + '</select>' +
-          '<textarea id="co-address" placeholder="Adresse précise / repère" style="width:100%;padding:10px;margin:5px 0;box-sizing:border-box;min-height:80px;"></textarea>' +
-          '<button id="co-submit" type="button" style="background:#ff690c;color:#fff;border:0;border-radius:999px;padding:12px 18px;font-weight:700;cursor:pointer;">Valider la commande</button>' +
+      Promise.all([get("/api/delivery-zones"), get("/api/auth/status").catch(function(){ return { user: null }; })]).then(function (results) {
+        var zones = results[0];
+        var user = (results[1] && results[1].user) || {};
+        var infoLine = '';
+        if (user && (user.name || user.email)) {
+          infoLine = '<div style="background:#fafafa;border:1px solid #eee;border-radius:12px;padding:12px 14px;margin:10px 0 12px;font-size:13px;color:#555;">' +
+            '<div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:#999;margin-bottom:6px;">Livré à</div>' +
+            '<strong style="color:#2b293a;">' + esc(user.name || '') + '</strong>' +
+            (user.email ? '<span style="color:#888;"> · ' + esc(user.email) + '</span>' : '') +
+            (user.phone ? '<br><span style="color:#888;font-size:12px;">📞 ' + esc(user.phone) + '</span>' : '') +
+            '</div>';
+        }
+        checkout.innerHTML =
+          '<h3 style="margin:0 0 10px;color:#2b293a;font-size:18px;">Passer commande</h3>' +
+          '<p style="color:#7a271a;background:#fff2e8;border:1px solid #fed7aa;padding:10px 12px;border-radius:10px;font-size:13px;margin:0 0 10px;">Livraison uniquement : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU.</p>' +
+          infoLine +
+          '<label style="display:block;font-size:13px;color:#555;margin:6px 0 4px;font-weight:600;">Zone de livraison</label>' +
+          '<select id="co-zone" style="width:100%;padding:12px;margin:0 0 12px;box-sizing:border-box;border:1px solid #ddd;border-radius:10px;background:#fff;font-size:14px;"><option value="">Choisir la zone de livraison</option>' + zones.map(function (z) { return '<option value="' + esc(z) + '">' + esc(z) + '</option>'; }).join("") + '</select>' +
+          '<button id="co-submit" type="button" style="width:100%;background:#ff690c;color:#fff;border:0;border-radius:999px;padding:14px 18px;font-weight:700;cursor:pointer;font-size:15px;">Valider la commande</button>' +
           '<div id="co-result" style="margin-top:12px;"></div>';
         document.getElementById("co-submit").addEventListener("click", function () {
+          var zone = document.getElementById("co-zone").value;
+          if (!zone) { toast("Veuillez choisir une zone de livraison.", "error"); return; }
           post("/api/orders", {
-            customer_name: document.getElementById("co-name").value,
-            customer_email: document.getElementById("co-email").value,
-            customer_phone: document.getElementById("co-phone").value,
-            delivery_zone: document.getElementById("co-zone").value,
-            delivery_address: document.getElementById("co-address").value
+            delivery_zone: zone
           }).then(function (res) {
             updateCartBadge();
             document.getElementById("co-result").innerHTML = '<div style="background:#ecfdf3;border:1px solid #abefc6;padding:12px;border-radius:12px;color:#067647;">Commande validée #' + res.order.id + '. <a href="' + res.receipt_url + '">Télécharger le reçu PDF</a><br><button type="button" id="cancel-order" style="margin-top:8px;">Annuler dans les 5 minutes</button></div>';
@@ -355,6 +395,63 @@
     });
   }
 
+  function applyAdminTheme(theme) {
+    var dark = theme === "dark";
+    var root = document.getElementById("magma-admin-root");
+    if (root) {
+      root.style.background = dark ? "#1c1b27" : "#fff";
+      root.style.color = dark ? "#e7e5ef" : "#2b293a";
+      root.style.boxShadow = dark ? "0 18px 60px rgba(0,0,0,.5)" : "0 18px 60px rgba(0,0,0,.12)";
+    }
+    document.body.style.background = dark ? "#0f0e17" : "";
+    var styleId = "magma-admin-theme-style";
+    var style = document.getElementById(styleId);
+    if (!style) {
+      style = document.createElement("style");
+      style.id = styleId;
+      document.head.appendChild(style);
+    }
+    style.textContent = dark
+      ? '#magma-admin-root h1,#magma-admin-root h2,#magma-admin-root h3{color:#fff;}'
+        + '#magma-admin-root input,#magma-admin-root select,#magma-admin-root textarea{background:#26243a !important;color:#e7e5ef !important;border-color:#3a3855 !important;}'
+        + '#magma-admin-root input::placeholder,#magma-admin-root textarea::placeholder{color:#8a87a6 !important;}'
+        + '#magma-admin-root button{filter:brightness(1.05);}'
+        + '#magma-admin-root [data-edit],#magma-admin-root [data-del],#magma-admin-root [data-ad-del]{background:#3a3855;color:#fff;border:0;border-radius:8px;padding:6px 10px;cursor:pointer;}'
+        + '#magma-admin-root [data-del],#magma-admin-root [data-ad-del]{background:#7a1d1d;}'
+        + '#magma-admin-root small,#magma-admin-root label{color:#bdbacb;}'
+        + '#magma-admin-root div[style*="border-bottom"]{border-color:#33304a !important;}'
+      : '';
+    try { localStorage.setItem("magma-admin-theme", theme); } catch (e) {}
+  }
+
+  function getAdminTheme() {
+    try { return localStorage.getItem("magma-admin-theme") || "light"; } catch (e) { return "light"; }
+  }
+
+  function injectAdminTopbar(host) {
+    if (document.getElementById("magma-admin-topbar")) return;
+    var bar = document.createElement("div");
+    bar.id = "magma-admin-topbar";
+    bar.style.cssText = "display:flex;align-items:center;justify-content:flex-end;gap:10px;margin:-8px 0 14px;";
+    var current = getAdminTheme();
+    bar.innerHTML =
+      '<span style="font-size:12px;color:#888;font-weight:600;">Thème</span>' +
+      '<button id="magma-theme-toggle" type="button" aria-label="Changer de thème" style="display:inline-flex;align-items:center;gap:8px;background:' + (current === "dark" ? "#3a3855" : "#f3f3f3") + ';color:' + (current === "dark" ? "#ffd166" : "#2b293a") + ';border:0;border-radius:999px;padding:8px 14px;cursor:pointer;font-weight:700;font-size:13px;">' +
+        '<span id="magma-theme-icon">' + (current === "dark" ? "☀️" : "🌙") + '</span>' +
+        '<span id="magma-theme-label">' + (current === "dark" ? "Clair" : "Sombre") + '</span>' +
+      '</button>';
+    host.insertBefore(bar, host.firstChild);
+    document.getElementById("magma-theme-toggle").addEventListener("click", function () {
+      var next = getAdminTheme() === "dark" ? "light" : "dark";
+      applyAdminTheme(next);
+      var btn = document.getElementById("magma-theme-toggle");
+      btn.style.background = next === "dark" ? "#3a3855" : "#f3f3f3";
+      btn.style.color = next === "dark" ? "#ffd166" : "#2b293a";
+      document.getElementById("magma-theme-icon").textContent = next === "dark" ? "☀️" : "🌙";
+      document.getElementById("magma-theme-label").textContent = next === "dark" ? "Clair" : "Sombre";
+    });
+  }
+
   function initAdmin() {
     var host = document.getElementById("magma-admin-root");
     if (!host) {
@@ -364,8 +461,14 @@
       document.body.appendChild(host);
     }
 
+    function setupTheme() {
+      injectAdminTopbar(host);
+      applyAdminTheme(getAdminTheme());
+    }
+
     function loginForm(message) {
       host.innerHTML = '<h1>Admin</h1><p>Accès protégé pour gérer les livres et les publicités.</p>' + (message ? '<p style="color:#b42318;">' + esc(message) + '</p>' : '') + '<input id="admin-password" type="password" placeholder="Mot de passe admin" style="padding:12px;border:1px solid #ddd;border-radius:12px;min-width:260px;"> <button id="admin-login" type="button" style="background:#2b293a;color:#fff;border:0;border-radius:999px;padding:12px 18px;cursor:pointer;">Entrer</button>';
+      setupTheme();
       document.getElementById("admin-login").addEventListener("click", function () {
         post("/api/admin/login", { password: document.getElementById("admin-password").value }).then(renderPanel).catch(function (error) { loginForm(error.error || "Accès refusé."); });
       });
@@ -376,7 +479,9 @@
     }
 
     function renderPanel() {
-      host.innerHTML = '<h1>Admin</h1><button id="admin-logout" type="button">Déconnexion</button><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-top:18px;"><section><h2>Livre</h2><input type="hidden" id="book-id">' + field("book-title", "Titre") + field("book-author", "Auteur") + field("book-category", "Catégorie") + field("book-price", "Prix", "number") + field("book-image", "URL de l'image") + field("book-stock", "Stock", "number") + '<textarea id="book-description" placeholder="Description" style="width:100%;padding:10px;margin:5px 0;min-height:70px;box-sizing:border-box;border:1px solid #ddd;border-radius:10px;"></textarea><textarea id="book-infos" placeholder="Infos supplémentaires" style="width:100%;padding:10px;margin:5px 0;min-height:60px;box-sizing:border-box;border:1px solid #ddd;border-radius:10px;"></textarea><label><input id="book-featured" type="checkbox"> En vedette</label><br><button id="book-save" type="button" style="margin-top:8px;background:#ff690c;color:#fff;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;">Enregistrer</button><button id="book-reset" type="button">Nouveau</button></section><section><h2>Publicité</h2>' + field("ad-title", "Titre") + field("ad-message", "Message") + field("ad-link", "Lien optionnel") + '<button id="ad-save" type="button">Publier</button><div id="ad-list"></div></section></div><h2>Livres existants</h2><div id="admin-books"></div>';
+      host.innerHTML = "";
+      setupTheme();
+      host.insertAdjacentHTML("beforeend", '<h1 style="margin:0 0 6px;">Admin</h1><button id="admin-logout" type="button" style="background:#2b293a;color:#fff;border:0;border-radius:999px;padding:8px 16px;cursor:pointer;font-weight:600;">Déconnexion</button><div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:20px;margin-top:18px;"><section><h2>Livre</h2><input type="hidden" id="book-id">' + field("book-title", "Titre") + field("book-author", "Auteur") + field("book-category", "Catégorie") + field("book-price", "Prix", "number") + field("book-image", "URL de l'image") + field("book-stock", "Stock", "number") + '<textarea id="book-description" placeholder="Description" style="width:100%;padding:10px;margin:5px 0;min-height:70px;box-sizing:border-box;border:1px solid #ddd;border-radius:10px;"></textarea><textarea id="book-infos" placeholder="Infos supplémentaires" style="width:100%;padding:10px;margin:5px 0;min-height:60px;box-sizing:border-box;border:1px solid #ddd;border-radius:10px;"></textarea><label><input id="book-featured" type="checkbox"> En vedette</label><br><button id="book-save" type="button" style="margin-top:8px;background:#ff690c;color:#fff;border:0;border-radius:999px;padding:10px 16px;cursor:pointer;">Enregistrer</button><button id="book-reset" type="button">Nouveau</button></section><section><h2>Publicité</h2>' + field("ad-title", "Titre") + field("ad-message", "Message") + field("ad-link", "Lien optionnel") + '<button id="ad-save" type="button">Publier</button><div id="ad-list"></div></section></div><h2>Livres existants</h2><div id="admin-books"></div>';
       document.getElementById("admin-logout").addEventListener("click", function () { post("/api/admin/logout", {}).then(loginForm); });
       document.getElementById("book-reset").addEventListener("click", clearBookForm);
       document.getElementById("book-save").addEventListener("click", saveBook);
