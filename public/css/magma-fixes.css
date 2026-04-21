@@ -275,3 +275,195 @@ html:has(form[name="PAGE_LOGIN"]) form[name="PAGE_LOGIN"] > div {
   height: auto !important;
   min-height: 0 !important;
 }
+
+/* =============================================================
+   13. Suppression du blanc en bas de page
+   Le body apparaissait derrière #page une fois le footer atteint.
+   On harmonise la couleur de fond avec celle du footer (#212121)
+   et on neutralise les hauteurs forcées des conteneurs racine.
+   La page de login conserve son propre dégradé via :has().
+   ============================================================= */
+html:not(:has(form[name="PAGE_LOGIN"])),
+html:not(:has(form[name="PAGE_LOGIN"])) body {
+  background: #212121 !important;
+  min-height: 100% !important;
+}
+html:not(:has(form[name="PAGE_LOGIN"])) #page,
+html:not(:has(form[name="PAGE_LOGIN"])) .pos1,
+html:not(:has(form[name="PAGE_LOGIN"])) .pos2 {
+  min-height: 0 !important;
+  height: auto !important;
+}
+/* Retirer la marge sous le footer (parfois ajoutée par WEBDEV) */
+.pos116 { margin-bottom: 0 !important; }
+
+/* =============================================================
+   14. Pied de page modernisé (#A62 / pos117 → pos127)
+   Conserve les couleurs (#212121, #c0c0c0, accent #ff690c)
+   Ajoute hiérarchie, colonnes équilibrées, séparateur et icônes.
+   ============================================================= */
+#A62 {
+  background: linear-gradient(180deg, #1d1c2a 0%, #141320 100%) !important;
+  border-top: 3px solid #ff690c !important;
+}
+#A62, #A62 > tbody > tr > td {
+  height: auto !important;
+  min-height: 0 !important;
+}
+
+/* Conteneur principal du footer : centrage + padding aéré */
+.pos117 {
+  max-width: 1180px !important;
+  margin: 0 auto !important;
+  padding: 56px 32px 24px !important;
+  box-sizing: border-box !important;
+}
+
+/* Rangée des 3 colonnes en CSS grid */
+.pos118 {
+  display: grid !important;
+  grid-template-columns: 1.4fr 1fr 1fr !important;
+  gap: 48px !important;
+  align-items: start !important;
+}
+.pos119, .pos120, .pos121, .pos122, .pos123 {
+  width: auto !important;
+  min-width: 0 !important;
+  float: none !important;
+  display: block !important;
+}
+
+/* Cellules de colonnes : reset des width WEBDEV */
+#A67, #A68, #A69 {
+  width: 100% !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+#A67 p, #A68 p, #A69 p {
+  margin: 8px 0 !important;
+  line-height: 1.7 !important;
+  font-family: 'Trebuchet MS', sans-serif !important;
+  font-size: 0.95rem !important;
+}
+
+/* Le 1er <p> de chaque colonne devient un titre stylé */
+#A67 p:first-child,
+#A68 p:first-child,
+#A69 p:first-child {
+  font-size: 1.05rem !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  margin: 0 0 18px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 2px solid #ff690c !important;
+  display: inline-block !important;
+}
+#A67 p:first-child span,
+#A68 p:first-child span,
+#A69 p:first-child font {
+  color: #ffffff !important;
+  font-weight: 700 !important;
+}
+/* Lignes vides (séparateurs typographiques) du WEBDEV : on cache */
+#A67 p:empty,
+#A68 p:empty,
+#A69 p:empty,
+#A67 p:has(br:only-child),
+#A68 p:has(br:only-child),
+#A69 p:has(br:only-child) {
+  display: none !important;
+}
+
+/* Liens du footer : rendre cliquables visuellement */
+#A67 p:not(:first-child),
+#A68 p:not(:first-child),
+#A69 p:not(:first-child) {
+  cursor: pointer;
+  transition: color 120ms ease, transform 120ms ease;
+}
+#A67 p:not(:first-child):hover span,
+#A67 p:not(:first-child):hover font,
+#A68 p:not(:first-child):hover span,
+#A68 p:not(:first-child):hover font,
+#A69 p:not(:first-child):hover span,
+#A69 p:not(:first-child):hover font {
+  color: #ff690c !important;
+}
+#A68 p { text-align: left !important; }
+
+/* Bande contact (pos124 → pos127) : séparateur + icônes ─────── */
+.pos124 {
+  margin-top: 40px !important;
+  padding-top: 24px !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 16px !important;
+  align-items: center !important;
+}
+.pos125, .pos126, .pos127 {
+  width: auto !important;
+  min-width: 0 !important;
+  float: none !important;
+  display: block !important;
+}
+.pos125 table, .pos126 table, .pos127 table {
+  height: auto !important;
+}
+#A76, #A77, #A78 {
+  padding: 4px 0 !important;
+  background: transparent !important;
+}
+#A76 p, #A77 p, #A78 p {
+  margin: 0 !important;
+  font-family: 'Trebuchet MS', sans-serif !important;
+  font-size: 0.92rem !important;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#A76 p::before,
+#A77 p::before,
+#A78 p::before {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: rgba(255, 105, 12, 0.14);
+  color: #ff690c;
+  font-size: 0.95rem;
+  flex-shrink: 0;
+}
+#A76 p::before { content: "\1F4CD"; }   /* 📍 */
+#A77 p::before { content: "\260E"; }    /* ☎ */
+#A78 p::before { content: "\2709"; }    /* ✉ */
+
+/* Ligne de copyright après la bande contact */
+.pos117::after {
+  content: "© 2026 Librairie Mayombe — Tous droits réservés.";
+  display: block;
+  margin: 28px auto 0;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  text-align: center;
+  font-family: 'Trebuchet MS', sans-serif;
+  font-size: 0.82rem;
+  color: rgba(192,192,192,0.55);
+  letter-spacing: 0.04em;
+}
+
+/* Responsive footer */
+@media only screen and (max-width: 900px) {
+  .pos117 { padding: 40px 20px 20px !important; }
+  .pos118 {
+    grid-template-columns: 1fr !important;
+    gap: 28px !important;
+  }
+  .pos124 {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+    margin-top: 28px !important;
+  }
+}
