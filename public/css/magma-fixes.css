@@ -298,63 +298,90 @@ html:not(:has(form[name="PAGE_LOGIN"])) .pos2 {
 .pos116 { margin-bottom: 0 !important; }
 
 /* =============================================================
-   14. Pied de page modernisé (#A62 / pos117 → pos127)
-   Conserve les couleurs (#212121, #c0c0c0, accent #ff690c)
-   Ajoute hiérarchie, colonnes équilibrées, séparateur et icônes.
+   14. Pied de page compact et modernisé (#A62 / pos116 → pos127)
+   Annule les flottants et positions absolues du WEBDEV pour
+   forcer une vraie disposition en grille, plus dense.
+   Conserve les couleurs (sombre + accent #ff690c).
    ============================================================= */
 #A62 {
   background: linear-gradient(180deg, #1d1c2a 0%, #141320 100%) !important;
-  border-top: 3px solid #ff690c !important;
+  border-top: 2px solid #ff690c !important;
 }
 #A62, #A62 > tbody > tr > td {
   height: auto !important;
   min-height: 0 !important;
+  padding: 0 !important;
+}
+.pos116 {
+  height: auto !important;
+  min-height: 0 !important;
+  max-width: none !important;
 }
 
-/* Conteneur principal du footer : centrage + padding aéré */
+/* Conteneur principal centré */
 .pos117 {
-  max-width: 1180px !important;
+  max-width: 1100px !important;
   margin: 0 auto !important;
-  padding: 56px 32px 24px !important;
+  padding: 28px 28px 14px !important;
   box-sizing: border-box !important;
-}
-
-/* Rangée des 3 colonnes en CSS grid */
-.pos118 {
-  display: grid !important;
-  grid-template-columns: 1.4fr 1fr 1fr !important;
-  gap: 48px !important;
-  align-items: start !important;
-}
-.pos119, .pos120, .pos121, .pos122, .pos123 {
   width: auto !important;
-  min-width: 0 !important;
   float: none !important;
   display: block !important;
 }
 
-/* Cellules de colonnes : reset des width WEBDEV */
+/* Rangée des 3 colonnes en grille — on annule float/margin/position WEBDEV */
+.pos118 {
+  display: grid !important;
+  grid-template-columns: 1.3fr 1fr 1fr !important;
+  gap: 28px 36px !important;
+  align-items: start !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  clear: both !important;
+}
+.pos119, .pos120, .pos121, .pos122, .pos123 {
+  width: auto !important;
+  min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  float: none !important;
+  clear: none !important;
+  position: static !important;
+  left: auto !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  overflow: visible !important;
+  display: block !important;
+}
+/* pos121 et pos123 sont des wrappers internes — pas besoin de réoffset */
+.pos121, .pos123 { display: block !important; }
+
+/* Cellules : reset complet */
 #A67, #A68, #A69 {
   width: 100% !important;
   padding: 0 !important;
   background: transparent !important;
 }
 #A67 p, #A68 p, #A69 p {
-  margin: 8px 0 !important;
-  line-height: 1.7 !important;
+  margin: 4px 0 !important;
+  line-height: 1.55 !important;
   font-family: 'Trebuchet MS', sans-serif !important;
-  font-size: 0.95rem !important;
+  font-size: 0.84rem !important;
+  text-align: left !important;
 }
 
-/* Le 1er <p> de chaque colonne devient un titre stylé */
+/* Titre de chaque colonne (1er <p>) */
 #A67 p:first-child,
 #A68 p:first-child,
 #A69 p:first-child {
-  font-size: 1.05rem !important;
-  letter-spacing: 0.12em !important;
+  font-size: 0.78rem !important;
+  letter-spacing: 0.14em !important;
   text-transform: uppercase !important;
-  margin: 0 0 18px !important;
-  padding-bottom: 10px !important;
+  margin: 0 0 10px !important;
+  padding-bottom: 6px !important;
   border-bottom: 2px solid #ff690c !important;
   display: inline-block !important;
 }
@@ -364,22 +391,22 @@ html:not(:has(form[name="PAGE_LOGIN"])) .pos2 {
   color: #ffffff !important;
   font-weight: 700 !important;
 }
-/* Lignes vides (séparateurs typographiques) du WEBDEV : on cache */
-#A67 p:empty,
-#A68 p:empty,
-#A69 p:empty,
-#A67 p:has(br:only-child),
-#A68 p:has(br:only-child),
-#A69 p:has(br:only-child) {
+/* Lignes vides du WEBDEV → masquées */
+#A67 p:empty, #A68 p:empty, #A69 p:empty {
+  display: none !important;
+}
+#A67 p:nth-child(2):has(br:only-child),
+#A68 p:nth-child(2):has(br:only-child),
+#A69 p:nth-child(2):has(br:only-child) {
   display: none !important;
 }
 
-/* Liens du footer : rendre cliquables visuellement */
+/* Liens (paragraphes après le titre) */
 #A67 p:not(:first-child),
 #A68 p:not(:first-child),
 #A69 p:not(:first-child) {
   cursor: pointer;
-  transition: color 120ms ease, transform 120ms ease;
+  transition: color 120ms ease;
 }
 #A67 p:not(:first-child):hover span,
 #A67 p:not(:first-child):hover font,
@@ -389,38 +416,49 @@ html:not(:has(form[name="PAGE_LOGIN"])) .pos2 {
 #A69 p:not(:first-child):hover font {
   color: #ff690c !important;
 }
-#A68 p { text-align: left !important; }
 
-/* Bande contact (pos124 → pos127) : séparateur + icônes ─────── */
+/* Bande contact (pos124 → pos127) ─────────────────────────── */
 .pos124 {
-  margin-top: 40px !important;
-  padding-top: 24px !important;
-  border-top: 1px solid rgba(255,255,255,0.08) !important;
   display: grid !important;
   grid-template-columns: repeat(3, 1fr) !important;
-  gap: 16px !important;
+  gap: 10px 24px !important;
   align-items: center !important;
+  margin: 18px 0 0 !important;
+  padding: 14px 0 0 !important;
+  border-top: 1px solid rgba(255,255,255,0.08) !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  float: none !important;
+  clear: both !important;
 }
 .pos125, .pos126, .pos127 {
   width: auto !important;
   min-width: 0 !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
   float: none !important;
+  clear: none !important;
+  position: static !important;
   display: block !important;
+  height: auto !important;
+  min-height: 0 !important;
 }
 .pos125 table, .pos126 table, .pos127 table {
   height: auto !important;
 }
 #A76, #A77, #A78 {
-  padding: 4px 0 !important;
+  padding: 0 !important;
   background: transparent !important;
 }
 #A76 p, #A77 p, #A78 p {
   margin: 0 !important;
   font-family: 'Trebuchet MS', sans-serif !important;
-  font-size: 0.92rem !important;
-  display: flex;
+  font-size: 0.82rem !important;
+  display: flex !important;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
+  line-height: 1.3 !important;
 }
 #A76 p::before,
 #A77 p::before,
@@ -428,42 +466,43 @@ html:not(:has(form[name="PAGE_LOGIN"])) .pos2 {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  background: rgba(255, 105, 12, 0.14);
+  background: rgba(255, 105, 12, 0.16);
   color: #ff690c;
-  font-size: 0.95rem;
+  font-size: 0.78rem;
   flex-shrink: 0;
 }
 #A76 p::before { content: "\1F4CD"; }   /* 📍 */
 #A77 p::before { content: "\260E"; }    /* ☎ */
 #A78 p::before { content: "\2709"; }    /* ✉ */
 
-/* Ligne de copyright après la bande contact */
+/* Ligne de copyright */
 .pos117::after {
   content: "© 2026 Librairie Mayombe — Tous droits réservés.";
   display: block;
-  margin: 28px auto 0;
-  padding-top: 18px;
-  border-top: 1px solid rgba(255,255,255,0.06);
+  margin: 14px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.05);
   text-align: center;
   font-family: 'Trebuchet MS', sans-serif;
-  font-size: 0.82rem;
-  color: rgba(192,192,192,0.55);
+  font-size: 0.72rem;
+  color: rgba(192,192,192,0.45);
   letter-spacing: 0.04em;
+  clear: both;
 }
 
 /* Responsive footer */
-@media only screen and (max-width: 900px) {
-  .pos117 { padding: 40px 20px 20px !important; }
+@media only screen and (max-width: 700px) {
+  .pos117 { padding: 22px 18px 12px !important; }
   .pos118 {
-    grid-template-columns: 1fr !important;
-    gap: 28px !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 20px 20px !important;
   }
   .pos124 {
     grid-template-columns: 1fr !important;
-    gap: 12px !important;
-    margin-top: 28px !important;
+    gap: 8px !important;
+    margin-top: 16px !important;
   }
 }
