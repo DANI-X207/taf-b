@@ -9,7 +9,7 @@ const { requireUser, getCurrentUser, isAuthenticated } = require("../middleware"
 const router = express.Router();
 
 const CANCEL_WINDOW_MINUTES = 5;
-const ORDER_STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Annulée"];
+const ORDER_STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Reçue", "Annulée"];
 const ALLOWED_DELIVERY_ZONES = ["Potopoto la gare", "Total vers Saint Exupérie", "Présidence", "OSH", "CHU"];
 
 function rowToOrder(row, items = []) {
@@ -226,6 +226,57 @@ router.post("/api/orders/:id/confirm-reception", requireUser(), (req, res) => {
   const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId);
   db.close();
   res.json(rowToOrder(final, items));
+});
+
+router.post("/api/orders/:id/mark-received", requireUser(), (req, res) => {
+  const db = getDb();
+  const orderId = parseInt(req.params.id);
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  if (!order) { db.close(); return res.status(404).json({ error: "Commande non trouvée." }); }
+  if (!userCanAccessOrder(req, order)) { db.close(); return res.status(403).json({ error: "Accès à cette commande refusé." }); }
+  if (order.status === "Annulée") { db.close(); return res.status(400).json({ error: "Cette commande a été annulée." }); }
+  if (order.status === "Reçue") { db.close(); return res.status(400).json({ error: "Réception déjà confirmée." }); }
+  const now = nowIso();
+  db.prepare("UPDATE orders SET status = 'Reçue', client_received = 1, client_confirmed = 1, received_at = ?, updated_at = ? WHERE id = ?").run(now, now, orderId);
+  const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId);
+  db.close();
+  res.json(rowToOrder(updated, items));
+});
+
+router.post("/api/orders/:id/report-not-received", requireUser(), async (req, res) => {
+  const db = getDb();
+  const orderId = parseInt(req.params.id);
+  const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  if (!order) { db.close(); return res.status(404).json({ error: "Commande non trouvée." }); }
+  if (!userCanAccessOrder(req, order)) { db.close(); return res.status(403).json({ error: "Accès à cette commande refusé." }); }
+  if (order.status === "Annulée") { db.close(); return res.status(400).json({ error: "Cette commande a été annulée." }); }
+  if (order.status === "Reçue") { db.close(); return res.status(400).json({ error: "Cette commande a déjà été marquée reçue." }); }
+  const reason = cleanText((req.body || {}).reason || "Non précisé", 500, true);
+  const now = nowIso();
+  db.prepare("UPDATE orders SET not_received_reported_at = ?, not_received_reason = ?, updated_at = ? WHERE id = ?").run(now, reason, now, orderId);
+  const updated = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId);
+  db.close();
+  try {
+    const host = process.env.SMTP_HOST;
+    if (host) {
+      const transporter = nodemailer.createTransport({
+        host,
+        port: parseInt(process.env.SMTP_PORT || "587"),
+        auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD } : undefined,
+      });
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER || "no-reply@librairie-magma.local",
+        to: process.env.ORDER_EMAIL || "moussokiexauce7@gmail.com",
+        subject: `[ALERTE] Commande #${orderId} signalée non reçue`,
+        text: `Le client ${updated.customer_name} (${updated.customer_email}, ${updated.customer_phone}) a signalé que la commande #${orderId} n'a pas été reçue.\n\nRaison : ${reason}\n\nZone : ${updated.delivery_zone}\nMontant : ${updated.total} FCFA\nStatut actuel : ${updated.status}\nDate commande : ${updated.created_at}`,
+      });
+    } else {
+      console.warn(`[ADMIN-NOTIFY] Commande #${orderId} signalée non reçue — raison: ${reason}`);
+    }
+  } catch (e) { console.error("Notification admin échouée:", e.message); }
+  res.json(rowToOrder(updated, items));
 });
 
 router.get("/api/my-orders", requireUser(), (req, res) => {

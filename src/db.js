@@ -120,6 +120,10 @@ function initDb() {
   addColumnIfMissing(db, "orders", "admin_confirmed", "INTEGER DEFAULT 0");
   addColumnIfMissing(db, "orders", "client_confirmed", "INTEGER DEFAULT 0");
   addColumnIfMissing(db, "orders", "validated_at", "TEXT");
+  addColumnIfMissing(db, "orders", "client_received", "INTEGER DEFAULT 0");
+  addColumnIfMissing(db, "orders", "received_at", "TEXT");
+  addColumnIfMissing(db, "orders", "not_received_reported_at", "TEXT");
+  addColumnIfMissing(db, "orders", "not_received_reason", "TEXT DEFAULT ''");
   addColumnIfMissing(db, "users", "phone", "TEXT DEFAULT ''");
   addColumnIfMissing(db, "users", "is_active", "INTEGER DEFAULT 1");
   addColumnIfMissing(db, "reviews", "user_id", "INTEGER REFERENCES users(id)");

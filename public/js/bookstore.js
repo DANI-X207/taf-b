@@ -699,7 +699,7 @@
     } catch (e) {}
   }
 
-  function openSettingsModal() {
+  function openSettingsModal() { window.location.href = "/parametres.html"; return; /* legacy modal kept for fallback */
     var existing = document.getElementById("magma-settings-modal");
     if (existing) { existing.remove(); return; }
     var theme = "light";
