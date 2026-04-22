@@ -148,10 +148,14 @@ router.get("/api/ads", (req, res) => {
   res.json(ads);
 });
 
+function requireSuperAdmin(req, res) {
+  if (!req.session.admin_authenticated) { res.status(403).json({ error: "Accès réservé à l'administrateur." }); return false; }
+  if (req.session.admin_role !== "super") { res.status(403).json({ error: "Accès réservé à l'administrateur principal." }); return false; }
+  return true;
+}
+
 router.get("/api/source.zip", (req, res) => {
-  if (!req.session.admin_authenticated) return res.status(403).json({ error: "Accès réservé à l'administrateur." });
-  const excludedDirs = new Set([".git", ".cache", ".pythonlibs", "__pycache__", "node_modules", ".local"]);
-  const excludedFiles = new Set(["data/bookstore.db"]);
+  if (!requireSuperAdmin(req, res)) return;
   res.setHeader("Content-Type", "application/zip");
   res.setHeader("Content-Disposition", 'attachment; filename="librairie-magma-source.zip"');
   const archive = archiver("zip", { zlib: { level: 9 } });
@@ -163,6 +167,37 @@ router.get("/api/source.zip", (req, res) => {
       ".local/**", "data/bookstore.db", "**/*.pyc", "attached_assets/**",
     ],
   });
+  archive.finalize();
+});
+
+router.get("/api/source-railway.zip", (req, res) => {
+  if (!requireSuperAdmin(req, res)) return;
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", 'attachment; filename="librairie-magma-railway.zip"');
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  archive.pipe(res);
+  archive.glob("**/*", {
+    cwd: BASE_DIR,
+    ignore: [
+      ".git/**", ".cache/**", ".pythonlibs/**", "__pycache__/**", "node_modules/**",
+      ".local/**", "data/bookstore.db", "**/*.pyc", "attached_assets/**",
+      ".replit", "replit.nix",
+    ],
+  });
+  const procfile = "web: node server.js\n";
+  const railwayJson = JSON.stringify({
+    "$schema": "https://railway.app/railway.schema.json",
+    build: { builder: "NIXPACKS" },
+    deploy: { startCommand: "node server.js", restartPolicyType: "ON_FAILURE", restartPolicyMaxRetries: 10 },
+  }, null, 2) + "\n";
+  const nixpacks = "[phases.setup]\nnixPkgs = ['nodejs_20']\n\n[start]\ncmd = 'node server.js'\n";
+  const envExample = "PORT=5000\nSESSION_SECRET=change-me\nADMIN_PASSWORD=TAF1-FLEMME\nADMIN_PASSWORD_SUPER=MMDE2007\n# SMTP_HOST=\n# SMTP_PORT=587\n# SMTP_USER=\n# SMTP_PASSWORD=\n# SMTP_FROM=\n# ORDER_EMAIL=\n";
+  const readme = "# Librairie Magma — Déploiement Railway\n\n1. Créez un nouveau projet Railway et importez ce dossier.\n2. Définissez les variables d'environnement (voir `.env.example`).\n3. Railway détecte Node.js automatiquement et utilise `node server.js` comme commande de démarrage.\n4. L'application écoute sur le port défini par `PORT` (5000 par défaut).\n";
+  archive.append(procfile, { name: "Procfile" });
+  archive.append(railwayJson, { name: "railway.json" });
+  archive.append(nixpacks, { name: "nixpacks.toml" });
+  archive.append(envExample, { name: ".env.example" });
+  archive.append(readme, { name: "RAILWAY.md" });
   archive.finalize();
 });
 

@@ -920,3 +920,43 @@ html[data-magma-theme="dark"] .mc-card h1,
 html[data-magma-theme="dark"] .mo-card h1,
 html[data-magma-theme="dark"] .magma-cart__sub,
 html[data-magma-theme="dark"] .mo-id { color: #fff !important; }
+
+/* === Admin dashboard: fond blanc (au lieu du fond noir) === */
+body:has(#admin-dashboard) { background: #f5f7fb !important; }
+#admin-dashboard .sidebar {
+  background: #ffffff !important;
+  box-shadow: 4px 0 20px rgba(20,20,40,.06) !important;
+  border-right: 1px solid #ececf0;
+}
+#admin-dashboard .sidebar-brand { border-bottom-color: #eee !important; }
+#admin-dashboard .sidebar-brand img { filter: none !important; }
+#admin-dashboard .sidebar-brand span { color: #2b293a !important; }
+#admin-dashboard .sidebar-brand small { color: #888 !important; }
+#admin-dashboard .nav-item {
+  color: #555 !important;
+}
+#admin-dashboard .nav-item:hover {
+  background: #f3f1ef !important;
+  color: #2b293a !important;
+}
+#admin-dashboard .nav-item.active {
+  background: #fff7ef !important;
+  color: #ff690c !important;
+  border-left-color: #ff690c !important;
+}
+#admin-dashboard .sidebar-footer { border-top-color: #eee !important; }
+#admin-dashboard .sidebar-footer a { color: #888 !important; }
+#admin-dashboard .sidebar-footer a:hover { color: #2b293a !important; }
+#admin-dashboard .btn-logout {
+  background: #f3f1ef !important;
+  color: #555 !important;
+  border: 1px solid #e2e2e8 !important;
+}
+#admin-dashboard .btn-logout:hover {
+  background: #ffe8d4 !important;
+  color: #ff690c !important;
+  border-color: #ff690c !important;
+}
+
+/* New Railway nav item icon tint */
+#admin-dashboard .nav-item[data-section="downloads-railway"] .icon { color: #6b46ff; }

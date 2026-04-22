@@ -7,6 +7,13 @@ const { requireAdmin } = require("../middleware");
 const router = express.Router();
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "TAF1-FLEMME";
+const ADMIN_PASSWORD_SUPER = process.env.ADMIN_PASSWORD_SUPER || "MMDE2007";
+
+function safeEqual(a, b) {
+  const A = Buffer.from(a);
+  const B = Buffer.from(b);
+  return A.length === B.length && crypto.timingSafeEqual(A, B);
+}
 
 const ORDER_STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Annulée"];
 
@@ -32,23 +39,31 @@ function tryValidateOrder(db, orderId) {
 }
 
 router.get("/api/admin/status", (req, res) => {
-  res.json({ authenticated: !!req.session.admin_authenticated });
+  res.json({
+    authenticated: !!req.session.admin_authenticated,
+    role: req.session.admin_role || (req.session.admin_authenticated ? "normal" : null),
+  });
 });
 
 router.post("/api/admin/login", (req, res) => {
   const data = req.body || {};
   const password = String(data.password || "");
-  const expected = Buffer.from(ADMIN_PASSWORD);
-  const provided = Buffer.from(password);
-  if (expected.length === provided.length && crypto.timingSafeEqual(expected, provided)) {
+  if (safeEqual(password, ADMIN_PASSWORD_SUPER)) {
     req.session.admin_authenticated = true;
-    return res.json({ success: true });
+    req.session.admin_role = "super";
+    return res.json({ success: true, role: "super" });
+  }
+  if (safeEqual(password, ADMIN_PASSWORD)) {
+    req.session.admin_authenticated = true;
+    req.session.admin_role = "normal";
+    return res.json({ success: true, role: "normal" });
   }
   return res.status(401).json({ error: "Mot de passe administrateur incorrect." });
 });
 
 router.post("/api/admin/logout", (req, res) => {
   req.session.admin_authenticated = false;
+  req.session.admin_role = null;
   res.json({ success: true });
 });
 

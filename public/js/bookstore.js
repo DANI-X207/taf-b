@@ -788,10 +788,82 @@
     }
   }
 
+  function applyAdminRoleUi() {
+    if (!document.getElementById("admin-dashboard")) return;
+    fetch("/api/admin/status").then(function (r) { return r.json(); }).then(function (st) {
+      var role = (st && st.role) || "normal";
+      var dlNav = document.querySelector('#admin-dashboard .nav-item[data-section="downloads"]');
+      var dlSection = document.getElementById("section-downloads");
+      if (role !== "super") {
+        if (dlNav) dlNav.style.display = "none";
+        if (dlSection) dlSection.style.display = "none";
+        var rwNav = document.querySelector('#admin-dashboard .nav-item[data-section="downloads-railway"]');
+        if (rwNav) rwNav.remove();
+        var rwSec = document.getElementById("section-downloads-railway");
+        if (rwSec) rwSec.remove();
+        return;
+      }
+      if (dlNav) dlNav.style.display = "";
+      if (dlSection) dlSection.style.display = "";
+      var nav = document.querySelector("#admin-dashboard .sidebar-nav");
+      if (nav && !document.querySelector('#admin-dashboard .nav-item[data-section="downloads-railway"]')) {
+        var item = document.createElement("div");
+        item.className = "nav-item";
+        item.setAttribute("data-section", "downloads-railway");
+        item.innerHTML = '<span class="icon">🚄</span><span>Télécharger version Railway</span>';
+        nav.appendChild(item);
+      }
+      var main = document.querySelector("#admin-dashboard .main-content") || document.getElementById("admin-dashboard");
+      if (main && !document.getElementById("section-downloads-railway")) {
+        var sec = document.createElement("div");
+        sec.className = "section";
+        sec.id = "section-downloads-railway";
+        sec.style.display = "none";
+        sec.innerHTML =
+          '<div class="page-header"><div><h2>Télécharger version Railway</h2>' +
+          '<p>Archive prête à déployer sur Railway (Procfile, railway.json, nixpacks.toml inclus).</p></div></div>' +
+          '<div class="card">' +
+            '<h3>Code source — version Railway</h3>' +
+            '<p style="font-size:13px;color:#888;margin-bottom:20px;">Cette archive ZIP contient le projet sans les fichiers spécifiques à Replit, prêt à être déployé sur Railway.</p>' +
+            '<a href="/api/source-railway.zip" class="download-card" style="border-color:#6b46ff;">' +
+              '<div class="dl-icon" style="font-size:32px;">🚄</div>' +
+              '<div class="dl-info"><strong>librairie-magma-railway.zip</strong>' +
+              '<small>Configuration Railway incluse — déploiement en un clic</small></div>' +
+            '</a>' +
+          '</div>';
+        main.appendChild(sec);
+      }
+      var newNav = document.querySelector('#admin-dashboard .nav-item[data-section="downloads-railway"]');
+      if (newNav && !newNav._wired) {
+        newNav._wired = true;
+        newNav.addEventListener("click", function () {
+          document.querySelectorAll("#admin-dashboard .nav-item").forEach(function (n) { n.classList.remove("active"); });
+          newNav.classList.add("active");
+          document.querySelectorAll("#admin-dashboard .section").forEach(function (s) { s.style.display = "none"; });
+          var s = document.getElementById("section-downloads-railway");
+          if (s) s.style.display = "block";
+        });
+      }
+    }).catch(function () {});
+  }
+
+  function watchAdminDashboard() {
+    if (document.getElementById("admin-dashboard")) { applyAdminRoleUi(); return; }
+    var tries = 0;
+    var iv = setInterval(function () {
+      tries++;
+      if (document.getElementById("admin-dashboard") && document.getElementById("admin-dashboard").style.display !== "none") {
+        applyAdminRoleUi();
+      }
+      if (tries > 80) clearInterval(iv);
+    }, 500);
+  }
+
   function init() {
     applyTheme();
     var page = pageName();
     addAdminLink();
+    if (page === "admin") watchAdminDashboard();
     if (page === "home") wireHomeIcons();
     if (page !== "login" && page !== "register") updateCartBadge();
     if (page === "home") initHome();
