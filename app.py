@@ -360,13 +360,21 @@ def row_to_user(row):
 
 
 def current_user():
-    """Retourne l'utilisateur connecté depuis la session sécurisée Flask."""
+    """Retourne l'utilisateur connecté depuis la session sécurisée Flask.
+    Si le compte n'existe plus (supprimé) ou a été désactivé par l'admin,
+    la session est vidée pour bloquer tout accès ultérieur."""
     user_id = session.get("user_id")
     if not user_id:
         return None
     conn = get_db()
     row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     conn.close()
+    if row is None:
+        session.pop("user_id", None)
+        return None
+    if "is_active" in row.keys() and not row["is_active"]:
+        session.pop("user_id", None)
+        return None
     return row_to_user(row)
 
 

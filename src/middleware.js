@@ -21,7 +21,14 @@ async function getCurrentUser(req) {
   if (!userId) return null;
   const db = await getDb();
   const row = await db.get("SELECT * FROM users WHERE id = ?", userId);
-  if (!row) return null;
+  if (!row) {
+    delete req.session.user_id;
+    return null;
+  }
+  if (row.is_active === 0) {
+    delete req.session.user_id;
+    return null;
+  }
   const { password_hash, ...user } = row;
   return user;
 }
