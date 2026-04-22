@@ -272,6 +272,7 @@ def init_db():
     add_column_if_missing(conn, "orders", "user_id", "INTEGER REFERENCES users(id)")
     add_column_if_missing(conn, "orders", "tracking_token", "TEXT DEFAULT ''")
     add_column_if_missing(conn, "orders", "updated_at", "TEXT DEFAULT ''")
+    add_column_if_missing(conn, "users", "is_active", "INTEGER NOT NULL DEFAULT 1")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -669,21 +670,30 @@ def auth_register():
 def auth_login():
     """Connecte un client existant après vérification du hash de mot de passe."""
     data = request.get_json(silent=True) or request.form
-    try:
-        email = clean_email(data.get("email"))
-        password = str(data.get("password") or "")
-    except ValueError as exc:
+    identifier = str(data.get("email") or data.get("username") or data.get("identifier") or "").strip()
+    password = str(data.get("password") or "")
+    if not identifier:
+        message = "Veuillez saisir votre email ou nom d'utilisateur."
         if request.is_json:
-            return jsonify({"error": str(exc)}), 400
-        return serve_auth_page(str(exc)), 400
+            return jsonify({"error": message}), 400
+        return serve_auth_page(message), 400
     conn = get_db()
-    row = conn.execute("SELECT * FROM users WHERE email = ?", (email,)).fetchone()
+    row = conn.execute(
+        "SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(?) OR LOWER(TRIM(name)) = LOWER(?)",
+        (identifier, identifier),
+    ).fetchone()
     if row is None or not check_password_hash(row["password_hash"], password):
         conn.close()
-        message = "Email ou mot de passe incorrect."
+        message = "Identifiant ou mot de passe incorrect."
         if request.is_json:
             return jsonify({"error": message}), 401
         return serve_auth_page(message), 401
+    if "is_active" in row.keys() and not row["is_active"]:
+        conn.close()
+        message = "Ce compte a été désactivé. Contactez l'administrateur."
+        if request.is_json:
+            return jsonify({"error": message}), 403
+        return serve_auth_page(message), 403
     conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now_iso(), row["id"]))
     conn.commit()
     conn.close()
@@ -1267,6 +1277,69 @@ def admin_delete_ad(ad_id):
     """Supprime une publicité depuis l'espace administrateur."""
     conn = get_db()
     conn.execute("DELETE FROM ads WHERE id = ?", (ad_id,))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True})
+
+
+@app.route("/api/admin/users", methods=["GET"])
+@require_admin_api
+def admin_list_users():
+    """Liste les utilisateurs avec stats commandes pour l'admin."""
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT id, name, email, created_at, last_login_at, "
+        "COALESCE(is_active, 1) AS is_active FROM users ORDER BY id DESC"
+    ).fetchall()
+    users = []
+    for r in rows:
+        stats = conn.execute(
+            "SELECT COUNT(*) AS cnt, COALESCE(SUM(total),0) AS total_spent "
+            "FROM orders WHERE user_id = ? AND status != 'Annulée'",
+            (r["id"],),
+        ).fetchone()
+        users.append({
+            "id": r["id"],
+            "name": r["name"],
+            "email": r["email"],
+            "created_at": r["created_at"],
+            "last_login_at": r["last_login_at"],
+            "is_active": bool(r["is_active"]),
+            "order_count": stats["cnt"] or 0,
+            "total_spent": stats["total_spent"] or 0,
+        })
+    conn.close()
+    return jsonify(users)
+
+
+@app.route("/api/admin/users/<int:user_id>/toggle-status", methods=["PUT", "POST"])
+@require_admin_api
+def admin_toggle_user_status(user_id):
+    """Active ou désactive un compte client."""
+    conn = get_db()
+    row = conn.execute("SELECT COALESCE(is_active, 1) AS is_active FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Utilisateur introuvable."}), 404
+    new_state = 0 if row["is_active"] else 1
+    conn.execute("UPDATE users SET is_active = ? WHERE id = ?", (new_state, user_id))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "is_active": bool(new_state)})
+
+
+@app.route("/api/admin/users/<int:user_id>", methods=["DELETE"])
+@require_admin_api
+def admin_delete_user(user_id):
+    """Supprime un compte client (les commandes sont conservées sans lien utilisateur)."""
+    conn = get_db()
+    row = conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not row:
+        conn.close()
+        return jsonify({"error": "Utilisateur introuvable."}), 404
+    conn.execute("UPDATE orders SET user_id = NULL WHERE user_id = ?", (user_id,))
+    conn.execute("UPDATE reviews SET user_id = NULL WHERE user_id = ?", (user_id,))
+    conn.execute("DELETE FROM users WHERE id = ?", (user_id,))
     conn.commit()
     conn.close()
     return jsonify({"success": True})

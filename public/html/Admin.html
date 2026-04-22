@@ -642,10 +642,14 @@
   }
 
   function loadUsers() {
+    var tbody = document.getElementById("users-tbody");
+    if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#999;">Chargement…</td></tr>';
     get("/api/admin/users").then(function (users) {
-      _users = users;
+      _users = Array.isArray(users) ? users : [];
       renderUsers();
-    }).catch(function () {});
+    }).catch(function (e) {
+      if (tbody) tbody.innerHTML = '<tr><td colspan="9" style="padding:20px;text-align:center;color:#c33;">Erreur de chargement : ' + esc((e && e.error) || e || "inconnue") + '</td></tr>';
+    });
   }
 
   function openUserModal(u) {
