@@ -164,7 +164,8 @@
 
     /* STATS */
     .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 16px; margin-bottom: 24px; }
-    .stat-box { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.07); }
+    .stat-box { background: #fff; border-radius: 8px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,.07); cursor: pointer; transition: transform .12s, box-shadow .12s; }
+    .stat-box:hover { transform: translateY(-2px); box-shadow: 0 6px 18px rgba(0,0,0,.1); }
     .stat-label { font-size: 12px; color: #999; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 8px; }
     .stat-value { font-size: 28px; font-weight: 700; color: #2b293a; }
     .stat-sub { font-size: 12px; color: #ff690c; margin-top: 4px; }
@@ -255,12 +256,12 @@
     <div class="section active" id="section-dashboard">
       <div class="page-header"><div><h2>Tableau de bord</h2><p>Vue d'ensemble de la librairie</p></div></div>
       <div class="stats-row">
-        <div class="stat-box"><div class="stat-label">Livres</div><div class="stat-value" id="stat-books">—</div><div class="stat-sub">dans le catalogue</div></div>
-        <div class="stat-box"><div class="stat-label">Utilisateurs</div><div class="stat-value" id="stat-users">—</div><div class="stat-sub">comptes clients</div></div>
-        <div class="stat-box"><div class="stat-label">Commandes</div><div class="stat-value" id="stat-orders">—</div><div class="stat-sub">au total</div></div>
-        <div class="stat-box"><div class="stat-label">En attente</div><div class="stat-value" id="stat-pending">—</div><div class="stat-sub">à traiter</div></div>
-        <div class="stat-box"><div class="stat-label">Validées</div><div class="stat-value" id="stat-validated">—</div><div class="stat-sub">double confirmation</div></div>
-        <div class="stat-box"><div class="stat-label">Publicités</div><div class="stat-value" id="stat-ads">—</div><div class="stat-sub">actives</div></div>
+        <div class="stat-box" data-go="books" title="Voir les livres"><div class="stat-label">Livres</div><div class="stat-value" id="stat-books">—</div><div class="stat-sub">dans le catalogue</div></div>
+        <div class="stat-box" data-go="users" title="Voir les utilisateurs"><div class="stat-label">Utilisateurs</div><div class="stat-value" id="stat-users">—</div><div class="stat-sub">comptes clients</div></div>
+        <div class="stat-box" data-go="orders" title="Voir les commandes"><div class="stat-label">Commandes</div><div class="stat-value" id="stat-orders">—</div><div class="stat-sub">au total</div></div>
+        <div class="stat-box" data-go="orders" data-tab="active" title="Voir les commandes en cours"><div class="stat-label">En attente</div><div class="stat-value" id="stat-pending">—</div><div class="stat-sub">à traiter</div></div>
+        <div class="stat-box" data-go="orders" data-tab="validated" title="Voir les commandes validées"><div class="stat-label">Validées</div><div class="stat-value" id="stat-validated">—</div><div class="stat-sub">double confirmation</div></div>
+        <div class="stat-box" data-go="ads" title="Voir les publicités"><div class="stat-label">Publicités</div><div class="stat-value" id="stat-ads">—</div><div class="stat-sub">actives</div></div>
       </div>
       <div class="card">
         <h3>Dernières commandes</h3>
@@ -277,6 +278,11 @@
       <div class="page-header">
         <div><h2>Utilisateurs</h2><p>Comptes clients enregistrés</p></div>
         <button class="btn btn-secondary btn-sm" id="users-refresh-btn">↻ Actualiser</button>
+      </div>
+      <div class="card" style="padding:14px 16px;margin-bottom:16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+        <input type="text" id="users-search" placeholder="🔎 Rechercher un client par nom ou email…" style="flex:1;min-width:220px;padding:10px 14px;border:1px solid #ddd;border-radius:6px;font-size:14px;background:#fafafa;outline:none;font-family:inherit;">
+        <button class="btn btn-secondary btn-sm" id="users-search-clear" type="button">Effacer</button>
+        <span id="users-search-count" style="color:#888;font-size:12px;"></span>
       </div>
       <div class="card" style="padding:0;overflow:hidden;">
         <table class="data-table">
@@ -486,6 +492,21 @@
     el.addEventListener("click", function () { activateSection(el.getAttribute("data-section")); });
   });
 
+  /* ── DASHBOARD STAT BOXES (clickable shortcuts) ── */
+  document.querySelectorAll(".stat-box[data-go]").forEach(function (box) {
+    box.addEventListener("click", function () {
+      var target = box.getAttribute("data-go");
+      var tab = box.getAttribute("data-tab");
+      activateSection(target);
+      if (target === "orders" && tab) {
+        setTimeout(function () {
+          var btn = document.querySelector("#orders-tab-bar .tab-btn[data-tab='" + tab + "']");
+          if (btn) btn.click();
+        }, 50);
+      }
+    });
+  });
+
   /* ── LOGOUT ── */
   document.getElementById("admin-logout-btn").addEventListener("click", function () {
     post("/api/admin/logout", {}).then(function () {
@@ -539,17 +560,50 @@
 
   /* ── USERS ── */
   var _users = [];
+  var _userSearch = "";
   document.getElementById("users-refresh-btn").addEventListener("click", loadUsers);
 
-  function loadUsers() {
-    get("/api/admin/users").then(function (users) {
-      _users = users;
-      var tbody = document.getElementById("users-tbody");
-      if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:#999;">Aucun utilisateur inscrit.</td></tr>';
-        return;
-      }
-      tbody.innerHTML = users.map(function (u) {
+  var searchInput = document.getElementById("users-search");
+  var searchClear = document.getElementById("users-search-clear");
+  if (searchInput) {
+    searchInput.addEventListener("input", function () {
+      _userSearch = searchInput.value.trim().toLowerCase();
+      renderUsers();
+    });
+  }
+  if (searchClear) {
+    searchClear.addEventListener("click", function () {
+      _userSearch = "";
+      if (searchInput) searchInput.value = "";
+      renderUsers();
+    });
+  }
+
+  function filteredUsers() {
+    if (!_userSearch) return _users;
+    return _users.filter(function (u) {
+      var name = String(u.name || "").toLowerCase();
+      var email = String(u.email || "").toLowerCase();
+      return name.indexOf(_userSearch) !== -1 || email.indexOf(_userSearch) !== -1;
+    });
+  }
+
+  function renderUsers() {
+    var tbody = document.getElementById("users-tbody");
+    var countEl = document.getElementById("users-search-count");
+    var users = filteredUsers();
+    if (countEl) {
+      countEl.textContent = _userSearch
+        ? users.length + " résultat" + (users.length > 1 ? "s" : "") + " sur " + _users.length
+        : "";
+    }
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="9" style="padding:24px;text-align:center;color:#999;">'
+        + (_userSearch ? "Aucun client ne correspond à « " + esc(_userSearch) + " »." : "Aucun utilisateur inscrit.")
+        + '</td></tr>';
+      return;
+    }
+    tbody.innerHTML = users.map(function (u) {
         var isActive = u.is_active === undefined || u.is_active;
         return '<tr class="clickable" data-uid="' + u.id + '">'
           + '<td style="color:#aaa;font-size:12px;">' + esc(u.id) + '</td>'
@@ -567,25 +621,31 @@
           + '</tr>';
       }).join("");
 
-      tbody.querySelectorAll("[data-view-uid]").forEach(function (btn) {
-        btn.addEventListener("click", function (e) { e.stopPropagation(); openUserModal(_users.find(function (x) { return String(x.id) === btn.getAttribute("data-view-uid"); })); });
-      });
-      tbody.querySelectorAll("[data-toggle-uid]").forEach(function (btn) {
-        btn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          var id = btn.getAttribute("data-toggle-uid");
-          put("/api/admin/users/" + id + "/toggle-status", {})
-            .then(function (r) { toast(r.is_active ? "Compte réactivé." : "Compte désactivé."); loadUsers(); })
-            .catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
-        });
-      });
-      tbody.querySelectorAll("tr.clickable").forEach(function (row) {
-        row.addEventListener("click", function () {
-          var u = _users.find(function (x) { return String(x.id) === row.getAttribute("data-uid"); });
-          if (u) openUserModal(u);
-        });
+    tbody.querySelectorAll("[data-view-uid]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) { e.stopPropagation(); openUserModal(_users.find(function (x) { return String(x.id) === btn.getAttribute("data-view-uid"); })); });
+    });
+    tbody.querySelectorAll("[data-toggle-uid]").forEach(function (btn) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        var id = btn.getAttribute("data-toggle-uid");
+        put("/api/admin/users/" + id + "/toggle-status", {})
+          .then(function (r) { toast(r.is_active ? "Compte réactivé." : "Compte désactivé."); loadUsers(); })
+          .catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
       });
     });
+    tbody.querySelectorAll("tr.clickable").forEach(function (row) {
+      row.addEventListener("click", function () {
+        var u = _users.find(function (x) { return String(x.id) === row.getAttribute("data-uid"); });
+        if (u) openUserModal(u);
+      });
+    });
+  }
+
+  function loadUsers() {
+    get("/api/admin/users").then(function (users) {
+      _users = users;
+      renderUsers();
+    }).catch(function () {});
   }
 
   function openUserModal(u) {
