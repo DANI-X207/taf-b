@@ -1068,7 +1068,7 @@ img, video, iframe, svg { max-width: 100%; height: auto; }
   /* Cancel WEBDEV pos45 fixed top margin on mobile */
   .pos45 { margin-top: 16px !important; }
 
-  /* ===== login.html / register.html (static HTML version) ===== */
+  /* ===== login.html / register.html (custom 2-panel layout) ===== */
   .container {
     flex-direction: column !important;
     width: 100% !important;
@@ -1077,7 +1077,9 @@ img, video, iframe, svg { max-width: 100%; height: auto; }
     border-radius: 0 !important;
     box-shadow: none !important;
   }
-  .panel-left { display: none !important; }
+  .panel-left {
+    display: none !important;
+  }
   .panel-right {
     width: 100% !important;
     max-width: 100vw !important;
@@ -1087,67 +1089,7 @@ img, video, iframe, svg { max-width: 100%; height: auto; }
     box-sizing: border-box !important;
   }
   .panel-right h1 { font-size: 26px !important; }
-  .field-group input { font-size: 16px !important; }
-
-  /* ===== JS-rendered login/register shells (inline styles, need
-      high-specificity overrides) ===== */
-  #magma-login-shell, #magma-register-shell {
-    padding: 0 !important;
-    align-items: stretch !important;
-    justify-content: stretch !important;
-  }
-  /* The outer card */
-  #magma-login-shell > div,
-  #magma-register-shell > div {
-    flex-direction: column !important;
-    width: 100% !important;
-    max-width: 100vw !important;
-    min-height: 100vh !important;
-    border-radius: 0 !important;
-    box-shadow: none !important;
-    overflow-y: auto !important;
-  }
-  /* Hide the decorative left panel (image / dark bloc) on phones */
-  #magma-login-shell > div > div:first-child,
-  #magma-register-shell > div > div:first-child {
-    display: none !important;
-  }
-  /* Right panel becomes full width and shrinkable */
-  #magma-login-shell > div > div:last-child,
-  #magma-register-shell > div > div:last-child {
-    width: 100% !important;
-    max-width: 100vw !important;
-    min-width: 0 !important;
-    flex: 1 1 auto !important;
-    flex-shrink: 1 !important;
-    padding: 28px 20px !important;
-    box-sizing: border-box !important;
-  }
-  /* Inputs full width and big enough to prevent iOS zoom */
-  #magma-login-shell input,
-  #magma-register-shell input {
-    width: 100% !important;
-    font-size: 16px !important;
-    box-sizing: border-box !important;
-  }
-  #magma-login-shell button,
-  #magma-register-shell button {
-    width: 100% !important;
-    box-sizing: border-box !important;
-    min-height: 44px !important;
-  }
-  /* Forgot-password modal */
-  #forgot-password-modal > div {
-    width: 100% !important;
-    max-width: 95vw !important;
-    padding: 20px !important;
-    box-sizing: border-box !important;
-  }
-  #forgot-password-modal input {
-    font-size: 16px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
+  .field-group input { font-size: 16px !important; } /* prevents iOS zoom */
 
   /* ===== Catalog / book grid ===== */
   #magma-results, .book-grid, .magma-grid {

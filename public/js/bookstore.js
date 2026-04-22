@@ -754,54 +754,27 @@
   }
 
   function wireHomeIcons() {
-    // Detect icons by their image filename — works across all WEBDEV pages
-    // (home, cart, detail, etc.) since IDs differ per page but the image
-    // filenames stay the same: account.png, shopping-cart.png, question-square.png.
-    function findByImg(filename) {
-      var imgs = document.querySelectorAll('img[src*="' + filename + '"]');
-      for (var i = 0; i < imgs.length; i++) {
-        var img = imgs[i];
-        if (img._magmaWired) continue;
-        return img;
-      }
-      return null;
+    var account = document.getElementById("A87");
+    var cart = document.getElementById("A85");
+    var question = document.getElementById("dzA88") || document.getElementById("A88");
+    if (account) {
+      account.style.cursor = "pointer";
+      account.setAttribute("title", "Mon Compte");
+      account.onclick = function (e) { e.preventDefault(); window.location.href = "/mon-compte.html"; };
+      var wrap = account.closest(".dzSpan"); if (wrap) wrap.style.cursor = "pointer";
     }
-    function wrapperOf(el) {
-      return (el.closest && (el.closest(".dzSpan") || el.closest("[class^='pos']"))) || el.parentNode || el;
+    if (cart) {
+      cart.style.cursor = "pointer";
+      cart.setAttribute("title", "Mes Commandes");
+      cart.onclick = function (e) { e.preventDefault(); window.location.href = "/mes-commandes.html"; };
+      var wrap2 = cart.closest(".dzSpan"); if (wrap2) wrap2.style.cursor = "pointer";
     }
-
-    var accountImg = findByImg("account.png");
-    if (accountImg) {
-      accountImg._magmaWired = true;
-      var aWrap = wrapperOf(accountImg);
-      aWrap.style.cursor = "pointer";
-      aWrap.setAttribute("title", "Mon Compte");
-      aWrap.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); window.location.href = "/mon-compte.html"; }, true);
-      accountImg.style.cursor = "pointer";
-      accountImg.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); window.location.href = "/mon-compte.html"; }, true);
+    if (question) {
+      var qWrap = question.closest ? (question.closest(".pos16") || question.closest(".dzSpan") || question) : question;
+      qWrap.style.display = "none";
     }
-
-    var cartImg = findByImg("shopping-cart.png");
-    if (cartImg) {
-      cartImg._magmaWired = true;
-      var cWrap = wrapperOf(cartImg);
-      cWrap.style.cursor = "pointer";
-      cWrap.setAttribute("title", "Mes Commandes");
-      cWrap.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); window.location.href = "/mes-commandes.html"; }, true);
-      cartImg.style.cursor = "pointer";
-      cartImg.addEventListener("click", function (e) { e.preventDefault(); e.stopPropagation(); window.location.href = "/mes-commandes.html"; }, true);
-    }
-
-    // Find and hide the question-mark icon on every page where it exists
-    var questionImg = document.querySelector('img[src*="question-square.png"], img[src*="question.png"]');
-    var qSlot = null;
-    if (questionImg) {
-      qSlot = wrapperOf(questionImg);
-      qSlot.style.display = "none";
-    }
-
-    // Inject our settings (gear) icon in the same slot, once per page
     if (!document.getElementById("magma-settings-icon")) {
+      var qSlot = document.getElementById("dzA88");
       var settings = document.createElement("button");
       settings.id = "magma-settings-icon";
       settings.type = "button";
@@ -810,7 +783,9 @@
       settings.innerHTML = "⚙";
       if (qSlot && qSlot.parentNode) {
         qSlot.parentNode.style.display = "";
-        qSlot.parentNode.appendChild(settings);
+        qSlot.style.display = "none";
+        var host = qSlot.parentNode;
+        host.appendChild(settings);
       } else {
         document.body.appendChild(settings);
       }
@@ -1022,14 +997,7 @@
           .observe(dash, { childList: true, subtree: true });
       }
     }
-    // Wire the top-bar icons (account, cart, hide question mark, settings)
-    // on ALL public pages, not just home. Each WEBDEV page exports the same
-    // top bar with the same element ids.
-    if (page !== "login" && page !== "register" && !isAdminAreaPage()) {
-      wireHomeIcons();
-      // Re-run after late renders (some WEBDEV pages inject the header dynamically)
-      [300, 1000, 2500].forEach(function (d) { setTimeout(wireHomeIcons, d); });
-    }
+    if (page === "home") wireHomeIcons();
     if (page !== "login" && page !== "register" && !isAdminAreaPage()) updateCartBadge();
     if (page === "home") initHome();
     if (page === "cart") initCart();
