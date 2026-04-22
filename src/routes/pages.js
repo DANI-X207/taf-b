@@ -243,12 +243,16 @@ router.get("/api/source-render.zip", (req, res) => {
   res.setHeader("Content-Disposition", 'attachment; filename="librairie-magma-render.zip"');
   const archive = archiver("zip", { zlib: { level: 9 } });
   archive.pipe(res);
+  // Faithful copy of the project (excluding only build/runtime artifacts that
+  // can be regenerated). The archive is generated on demand at every request,
+  // so any modification is reflected immediately.
   archive.glob("**/*", {
     cwd: BASE_DIR,
+    dot: true,
     ignore: [
-      ".git/**", ".cache/**", ".pythonlibs/**", "__pycache__/**", "node_modules/**",
-      ".local/**", "data/bookstore.db", "**/*.pyc", "attached_assets/**",
-      ".replit", "replit.nix",
+      ".git/**", ".cache/**", ".pythonlibs/**", "__pycache__/**",
+      "node_modules/**", ".local/**", "data/bookstore.db",
+      "**/*.pyc", "attached_assets/**", ".upm/**",
     ],
   });
   const procfile = "web: node server.js\n";
