@@ -960,3 +960,77 @@ body:has(#admin-dashboard) { background: #f5f7fb !important; }
 
 /* New Railway nav item icon tint */
 #admin-dashboard .nav-item[data-section="downloads-railway"] .icon { color: #6b46ff; }
+
+/* =============================================================
+   Admin pages — blue/white scheme + hide cart on admin
+   Applied via body.admin-page (set on /admin.html, /super-admin.html
+   served by serveAdminDashboard) and #admin-dashboard for the
+   classic Admin.html when dashboard is visible.
+   ============================================================= */
+
+/* Hide floating cart badge & "Admin" link on admin pages */
+body.admin-page #magma-cart-badge,
+body.admin-page #magma-admin-link,
+#admin-dashboard ~ #magma-cart-badge,
+body:has(#admin-dashboard[style*="display: block"]) #magma-cart-badge,
+body:has(#admin-dashboard[style*="display:block"]) #magma-cart-badge,
+body:has(#admin-dashboard[style*="display: block"]) #magma-admin-link,
+body:has(#admin-dashboard[style*="display:block"]) #magma-admin-link {
+  display: none !important;
+}
+
+/* Blue accent palette for admin pages */
+body.admin-page,
+body.admin-page #admin-dashboard {
+  --magma-admin-accent: #1d4ed8;
+  --magma-admin-accent-soft: #eff4ff;
+  --magma-admin-accent-strong: #1e40af;
+}
+
+body.admin-page .nav-item.active {
+  background: var(--magma-admin-accent-soft) !important;
+  color: var(--magma-admin-accent) !important;
+  border-left-color: var(--magma-admin-accent) !important;
+}
+body.admin-page .nav-item[data-section="downloads-railway"] .icon { color: #6b46ff; }
+
+body.admin-page .btn-primary {
+  background: var(--magma-admin-accent) !important;
+  color: #fff !important;
+}
+body.admin-page .btn-primary:hover { background: var(--magma-admin-accent-strong) !important; }
+
+body.admin-page .tab-btn .tab-count {
+  background: var(--magma-admin-accent) !important;
+  color: #fff !important;
+}
+
+body.admin-page .form-group input:focus,
+body.admin-page .form-group textarea:focus,
+body.admin-page .login-box input:focus,
+body.admin-page #magma-order-search-input:focus {
+  border-color: var(--magma-admin-accent) !important;
+}
+
+body.admin-page .stat-sub { color: var(--magma-admin-accent) !important; }
+
+body.admin-page .download-card:hover {
+  border-color: var(--magma-admin-accent) !important;
+  background: var(--magma-admin-accent-soft) !important;
+}
+
+body.admin-page .check-label input { accent-color: var(--magma-admin-accent) !important; }
+
+/* "Statut" action button on order cards: keep blue for admin */
+body.admin-page .order-card .btn-primary,
+body.admin-page #orders-list .btn-primary {
+  background: var(--magma-admin-accent) !important;
+}
+
+/* Search bar focus ring */
+body.admin-page #magma-order-search-input {
+  transition: border-color .15s, box-shadow .15s;
+}
+body.admin-page #magma-order-search-input:focus {
+  box-shadow: 0 0 0 3px rgba(29,78,216,.15);
+}

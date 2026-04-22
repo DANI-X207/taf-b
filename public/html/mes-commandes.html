@@ -70,13 +70,20 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
     list.innerHTML=filtered.map(function(o){
       var bg=STATUS_BG[o.status]||"#f3f4f6"; var fg=STATUS_FG[o.status]||"#555";
       var canAct = o.status!=="Reçue" && o.status!=="Annulée";
+      var canReceipt = ["Confirmée","En livraison","Livrée","Reçue","Validée"].indexOf(o.status) !== -1;
       var flag = o.not_received_reported_at ? '<div class="mo-flag">⚠ Non-réception signalée — l\'administrateur a été notifié.</div>' : '';
-      var actions = canAct ? (
+      var receiptBtn = canReceipt
+        ? '<a class="mo-btn mo-btn-ok" href="/api/orders/'+esc(o.id)+'/receipt.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">📄 Télécharger le reçu (PDF)</a>'
+        : '<button class="mo-btn" type="button" disabled title="Disponible dès que la commande sera confirmée par l\'administrateur" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;">📄 Reçu PDF (en attente de confirmation)</button>';
+      var actions = (canAct ? (
         '<div class="mo-actions">'+
+          receiptBtn +
           '<button class="mo-btn mo-btn-ok" data-act="recv" data-id="'+esc(o.id)+'">✓ Valider la réception</button>'+
           '<button class="mo-btn mo-btn-warn" data-act="not" data-id="'+esc(o.id)+'">⚠ Signaler non reçu</button>'+
         '</div>'
-      ) : '';
+      ) : (
+        '<div class="mo-actions">'+ receiptBtn +'</div>'
+      ));
       return '<div class="mo-item" data-order="'+esc(o.id)+'">'+
         '<div class="mo-row">'+
           '<div><div class="mo-id">Commande #'+esc(o.id)+'</div><div class="mo-date">'+esc(fmtDate(o.created_at))+'</div></div>'+

@@ -200,6 +200,11 @@ router.get("/api/orders/:id/receipt.pdf", (req, res) => {
   const order = db.prepare("SELECT * FROM orders WHERE id = ?").get(parseInt(req.params.id));
   if (!order) { db.close(); return res.status(404).json({ error: "Commande non trouvée" }); }
   if (!userCanAccessOrder(req, order)) { db.close(); return res.status(403).json({ error: "Accès à cette commande refusé." }); }
+  const RECEIPT_OK = ["Confirmée", "En livraison", "Livrée", "Reçue", "Validée"];
+  if (!RECEIPT_OK.includes(order.status)) {
+    db.close();
+    return res.status(403).json({ error: "Le reçu sera disponible dès que la commande sera confirmée par l'administrateur." });
+  }
   const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(parseInt(req.params.id));
   db.close();
   generateReceiptPdf(order, items, res);

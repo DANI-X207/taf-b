@@ -113,6 +113,16 @@ router.get("/api/admin/orders", requireAdmin(), (req, res) => {
   res.json(orders);
 });
 
+const ALLOWED_TRANSITIONS = {
+  "En attente": ["Confirmée", "Annulée"],
+  "Confirmée": ["En livraison", "Annulée"],
+  "En livraison": ["Livrée"],
+  "Livrée": ["Validée"],
+  "Validée": [],
+  "Reçue": [],
+  "Annulée": [],
+};
+
 router.put("/api/admin/orders/:id/status", requireAdmin(), (req, res) => {
   const data = req.body || {};
   const status = cleanText(data.status, 40, true);
@@ -120,9 +130,16 @@ router.put("/api/admin/orders/:id/status", requireAdmin(), (req, res) => {
     return res.status(400).json({ error: "Statut invalide." });
   const db = getDb();
   const orderId = parseInt(req.params.id);
+  const current = db.prepare("SELECT * FROM orders WHERE id = ?").get(orderId);
+  if (!current) { db.close(); return res.status(404).json({ error: "Commande non trouvée." }); }
+  if (current.status === status) { db.close(); return res.status(400).json({ error: "Le statut est déjà « " + status + " »." }); }
+  const allowed = ALLOWED_TRANSITIONS[current.status] || [];
+  if (!allowed.includes(status)) {
+    db.close();
+    return res.status(400).json({ error: "Transition interdite : « " + current.status + " » → « " + status + " ». Une commande confirmée ne peut pas revenir en attente, et une commande en livraison ne peut pas être remise en confirmée." });
+  }
   const now = nowIso();
-
-  const adminConfirmed = status === "Livrée" ? 1 : (status === "En attente" ? 0 : undefined);
+  const adminConfirmed = (status === "Confirmée" || status === "En livraison" || status === "Livrée") ? 1 : undefined;
   if (adminConfirmed !== undefined) {
     db.prepare("UPDATE orders SET status = ?, admin_confirmed = ?, updated_at = ? WHERE id = ?").run(status, adminConfirmed, now, orderId);
   } else {
@@ -130,7 +147,6 @@ router.put("/api/admin/orders/:id/status", requireAdmin(), (req, res) => {
   }
 
   const updatedOrder = tryValidateOrder(db, orderId);
-  if (!updatedOrder) { db.close(); return res.status(404).json({ error: "Commande non trouvée." }); }
   const items = db.prepare("SELECT * FROM order_items WHERE order_id = ?").all(orderId);
   db.close();
   res.json(rowToOrder(updatedOrder, items));

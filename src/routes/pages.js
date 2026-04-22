@@ -136,6 +136,42 @@ router.get("/", (req, res) => serveHtml("index.html", req, res));
 
 router.get("/favicon.ico", (req, res) => res.status(204).end());
 
+function serveAdminDashboard(role, req, res) {
+  if (!req.session.admin_authenticated) return res.redirect("/Admin.html");
+  if (req.session.admin_role !== role) {
+    return res.redirect(req.session.admin_role === "super" ? "/super-admin.html" : "/admin.html");
+  }
+  const filepath = path.join(PUBLIC_HTML, "Admin.html");
+  let content = fs.readFileSync(filepath, "utf8");
+  content = content.replace(/<title>[^<]*<\/title>/, `<title>${SITE_NAME} — ${role === "super" ? "Super Admin" : "Admin"}</title>`);
+  // Hide login screen, force show dashboard
+  content = content.replace('<div id="admin-login-screen">', '<div id="admin-login-screen" style="display:none!important;">');
+  content = content.replace('<div id="admin-dashboard">', '<div id="admin-dashboard" style="display:block;">');
+  // Inject role marker for client JS
+  content = content.replace("</head>", `<script>window.MAGMA_ADMIN_ROLE=${JSON.stringify(role)};window.MAGMA_ADMIN_PAGE=true;</script><script>(function(){var orig=window.fetch;})();</script></head>`);
+  // Inject magma-fixes css + bookstore.js
+  if (!content.includes("magma-fixes.css")) {
+    content = content.replace("</head>", '<link rel="stylesheet" href="/magma-fixes.css"></head>');
+  }
+  if (!content.includes("/js/bookstore.js")) {
+    content = content.replace("</body>", '<script src="/js/bookstore.js"></script></body>');
+  }
+  // Mark body for CSS scoping
+  content = content.replace("<body>", `<body class="admin-page admin-${role}">`);
+  res.type("html").send(content);
+}
+
+// Case-sensitive guard: only the lowercase paths are role-locked dashboards.
+// /Admin.html (capital A) is the original WEBDEV login page and must fall through to serveHtml.
+router.get("/admin.html", (req, res, next) => {
+  if (req.path !== "/admin.html") return next();
+  return serveAdminDashboard("normal", req, res);
+});
+router.get("/super-admin.html", (req, res, next) => {
+  if (req.path !== "/super-admin.html") return next();
+  return serveAdminDashboard("super", req, res);
+});
+
 router.get("/:filename([^/]+\\.html)", (req, res) => serveHtml(req.params.filename, req, res));
 
 router.get(/^\/(.+\.html)$/, (req, res) => serveHtml(req.params[0], req, res));

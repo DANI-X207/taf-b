@@ -50,8 +50,13 @@
     if (p.indexOf("MABOUTIQUE") !== -1) return "boutique";
     if (p.indexOf("register") !== -1 || p.indexOf("inscription") !== -1) return "register";
     if (p.indexOf("login") !== -1 || p.indexOf("connexion") !== -1) return "login";
-    if (p.indexOf("Admin") !== -1) return "admin";
+    if (p === "/admin.html" || p === "/super-admin.html") return "admin";
+    if (p.indexOf("Admin") !== -1) return "admin-login";
     return "other";
+  }
+  function isAdminAreaPage() {
+    var n = pageName();
+    return n === "admin" || n === "admin-login";
   }
 
   function toast(message, type) {
@@ -790,7 +795,10 @@
 
   function applyAdminRoleUi() {
     if (!document.getElementById("admin-dashboard")) return;
-    fetch("/api/admin/status").then(function (r) { return r.json(); }).then(function (st) {
+    var rolePromise = window.MAGMA_ADMIN_ROLE
+      ? Promise.resolve({ role: window.MAGMA_ADMIN_ROLE })
+      : fetch("/api/admin/status").then(function (r) { return r.json(); });
+    rolePromise.then(function (st) {
       var role = (st && st.role) || "normal";
       var dlNav = document.querySelector('#admin-dashboard .nav-item[data-section="downloads"]');
       var dlSection = document.getElementById("section-downloads");
@@ -859,13 +867,81 @@
     }, 500);
   }
 
+  function watchAdminLoginRedirect() {
+    // On /Admin.html (login gate): when login succeeds, redirect to role-specific dashboard.
+    var origFetch = window.fetch;
+    window.fetch = function (input, init) {
+      var url = typeof input === "string" ? input : (input && input.url) || "";
+      var p = origFetch.apply(this, arguments);
+      if (url.indexOf("/api/admin/login") !== -1) {
+        p.then(function (resp) {
+          if (resp && resp.ok) {
+            try {
+              resp.clone().json().then(function (j) {
+                var role = j && j.role;
+                setTimeout(function () {
+                  window.location.replace(role === "super" ? "/super-admin.html" : "/admin.html");
+                }, 50);
+              });
+            } catch (e) {}
+          }
+        }).catch(function () {});
+      }
+      return p;
+    };
+  }
+
+  function injectOrderSearchUi() {
+    var section = document.getElementById("section-orders");
+    if (!section || document.getElementById("magma-order-search")) return;
+    var bar = document.createElement("div");
+    bar.id = "magma-order-search";
+    bar.style.cssText = "background:#fff;border-radius:8px;padding:14px 18px;margin-bottom:18px;box-shadow:0 2px 12px rgba(0,0,0,.07);display:flex;gap:10px;align-items:center;flex-wrap:wrap;";
+    bar.innerHTML =
+      '<label for="magma-order-search-input" style="font-size:12px;font-weight:700;color:#666;text-transform:uppercase;letter-spacing:.4px;">Rechercher par client</label>' +
+      '<input id="magma-order-search-input" type="search" placeholder="Nom du client…" style="flex:1;min-width:200px;padding:9px 12px;border:1px solid #ddd;border-radius:6px;font-size:14px;outline:none;" autocomplete="off">' +
+      '<button type="button" id="magma-order-search-clear" style="padding:8px 14px;background:#f0f0f0;color:#555;border:none;border-radius:6px;font-weight:600;cursor:pointer;">Effacer</button>' +
+      '<div id="magma-order-search-results" style="flex-basis:100%;margin-top:6px;font-size:13px;color:#666;"></div>';
+    var tabBar = document.getElementById("orders-tab-bar");
+    section.insertBefore(bar, tabBar || section.firstChild);
+    var input = document.getElementById("magma-order-search-input");
+    var info = document.getElementById("magma-order-search-results");
+    var clear = document.getElementById("magma-order-search-clear");
+    function applyFilter() {
+      var q = (input.value || "").trim().toLowerCase();
+      var cards = document.querySelectorAll("#orders-list .order-card");
+      var shown = 0;
+      cards.forEach(function (card) {
+        if (!q) { card.style.display = ""; return; }
+        var txt = (card.textContent || "").toLowerCase();
+        var match = txt.indexOf(q) !== -1;
+        card.style.display = match ? "" : "none";
+        if (match) shown++;
+      });
+      if (!q) { info.textContent = ""; return; }
+      info.textContent = shown + " commande" + (shown !== 1 ? "s" : "") + " trouvée" + (shown !== 1 ? "s" : "") + " pour « " + input.value.trim() + " »";
+    }
+    input.addEventListener("input", applyFilter);
+    clear.addEventListener("click", function () { input.value = ""; applyFilter(); input.focus(); });
+    // Re-apply when orders list re-renders
+    var list = document.getElementById("orders-list");
+    if (list && window.MutationObserver) {
+      new MutationObserver(function () { if (input.value.trim()) applyFilter(); }).observe(list, { childList: true, subtree: true });
+    }
+  }
+
   function init() {
     applyTheme();
     var page = pageName();
-    addAdminLink();
-    if (page === "admin") watchAdminDashboard();
+    if (!isAdminAreaPage()) addAdminLink();
+    if (page === "admin-login") watchAdminLoginRedirect();
+    if (page === "admin") {
+      watchAdminDashboard();
+      setTimeout(injectOrderSearchUi, 300);
+      setTimeout(injectOrderSearchUi, 1200);
+    }
     if (page === "home") wireHomeIcons();
-    if (page !== "login" && page !== "register") updateCartBadge();
+    if (page !== "login" && page !== "register" && !isAdminAreaPage()) updateCartBadge();
     if (page === "home") initHome();
     if (page === "cart") initCart();
     if (page === "detail") initDetail();
