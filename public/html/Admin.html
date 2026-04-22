@@ -314,7 +314,13 @@
           <div class="form-group"><label>Auteur *</label><input type="text" id="book-author" placeholder="Nom de l'auteur"></div>
           <div class="form-group"><label>Catégorie *</label><input type="text" id="book-category" placeholder="Ex: Roman, Science-fiction…"></div>
           <div class="form-group"><label>Prix (FCFA) *</label><input type="number" id="book-price" placeholder="0" min="1"></div>
-          <div class="form-group"><label>URL de l'image</label><input type="text" id="book-image" placeholder="https://…"></div>
+          <div class="form-group">
+            <label>Image de couverture</label>
+            <input type="file" id="book-image-file" accept="image/png,image/jpeg,image/webp,image/gif" style="margin-bottom:6px;">
+            <input type="text" id="book-image" placeholder="…ou collez une URL https://…">
+            <div id="book-image-preview" style="margin-top:8px;display:none;"><img id="book-image-preview-img" src="" alt="" style="max-width:120px;max-height:160px;border-radius:6px;border:1px solid #e5e5e5;"></div>
+            <small id="book-image-status" style="display:block;color:#888;margin-top:4px;"></small>
+          </div>
           <div class="form-group"><label>Stock</label><input type="number" id="book-stock" placeholder="10" min="0"></div>
           <div class="form-group span2"><label>Description</label><textarea id="book-description" placeholder="Description du livre…"></textarea></div>
           <div class="form-group span2"><label>Informations supplémentaires</label><textarea id="book-infos" placeholder="ISBN, édition, langue…"></textarea></div>
@@ -618,6 +624,9 @@
     document.getElementById("book-featured").checked = false;
     document.getElementById("book-form-title").textContent = "Ajouter un livre";
     document.getElementById("book-save-btn").textContent = "Enregistrer le livre";
+    var fileInput = document.getElementById("book-image-file"); if (fileInput) fileInput.value = "";
+    var preview = document.getElementById("book-image-preview"); if (preview) preview.style.display = "none";
+    var status = document.getElementById("book-image-status"); if (status) status.textContent = "";
   }
   function bookPayload() {
     return { titre: document.getElementById("book-title").value, auteur: document.getElementById("book-author").value, genre: document.getElementById("book-category").value, prix: document.getElementById("book-price").value, image: document.getElementById("book-image").value, stock: document.getElementById("book-stock").value || 10, description: document.getElementById("book-description").value, infos: document.getElementById("book-infos").value, featured: document.getElementById("book-featured").checked };
@@ -629,6 +638,41 @@
     var action = id ? put("/api/books/" + id, bookPayload()) : post("/api/books", bookPayload());
     action.then(function () { toast(id ? "Livre mis à jour." : "Livre ajouté."); clearBookForm(); loadBooks(); })
       .catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
+  });
+
+  function showCoverPreview(url) {
+    var box = document.getElementById("book-image-preview");
+    var img = document.getElementById("book-image-preview-img");
+    if (!url) { box.style.display = "none"; img.src = ""; return; }
+    img.src = url;
+    box.style.display = "block";
+  }
+
+  document.getElementById("book-image").addEventListener("input", function () {
+    showCoverPreview(this.value.trim());
+  });
+
+  document.getElementById("book-image-file").addEventListener("change", function (ev) {
+    var file = ev.target.files && ev.target.files[0];
+    if (!file) return;
+    var statusEl = document.getElementById("book-image-status");
+    statusEl.textContent = "Téléversement en cours…";
+    statusEl.style.color = "#555";
+    var fd = new FormData();
+    fd.append("file", file);
+    fetch("/api/admin/upload-cover", { method: "POST", body: fd, credentials: "same-origin" })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+      .then(function (res) {
+        if (!res.ok) throw res.data;
+        document.getElementById("book-image").value = res.data.url;
+        showCoverPreview(res.data.url);
+        statusEl.textContent = "Image téléversée ✓";
+        statusEl.style.color = "#166534";
+      })
+      .catch(function (err) {
+        statusEl.textContent = (err && err.error) || "Erreur lors du téléversement.";
+        statusEl.style.color = "#b42318";
+      });
   });
 
   function loadBooks() {
@@ -678,6 +722,7 @@
           document.getElementById("book-category").value = b.genre;
           document.getElementById("book-price").value = b.prix;
           document.getElementById("book-image").value = b.image || "";
+          showCoverPreview(b.image || "");
           document.getElementById("book-stock").value = b.stock;
           document.getElementById("book-description").value = b.description || "";
           document.getElementById("book-infos").value = b.infos || "";

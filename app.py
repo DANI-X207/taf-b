@@ -191,6 +191,8 @@ def clean_url(value, max_len=700):
     url = clean_text(value, max_len)
     if not url:
         return ""
+    if url.startswith("/uploads/"):
+        return url
     parsed = urlparse(url)
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
         raise ValueError("URL invalide")
@@ -1438,6 +1440,43 @@ def download_source_railway_zip():
 def download_source_zip_alias():
     """Alias lisible pour télécharger le code source complet."""
     return download_source_zip()
+
+
+UPLOADS_DIR = os.path.join(BASE_DIR, "public", "uploads")
+COVERS_DIR = os.path.join(UPLOADS_DIR, "covers")
+os.makedirs(COVERS_DIR, exist_ok=True)
+
+ALLOWED_COVER_EXT = {"jpg", "jpeg", "png", "webp", "gif"}
+MAX_COVER_BYTES = 5 * 1024 * 1024  # 5 Mo
+
+
+@app.route("/api/admin/upload-cover", methods=["POST"])
+@require_admin_api
+def upload_cover():
+    """Reçoit une image de couverture envoyée depuis l'espace administrateur."""
+    file = request.files.get("file")
+    if not file or not file.filename:
+        return jsonify({"error": "Aucun fichier reçu"}), 400
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in ALLOWED_COVER_EXT:
+        return jsonify({"error": "Format non autorisé (jpg, png, webp, gif)"}), 400
+    file.stream.seek(0, os.SEEK_END)
+    size = file.stream.tell()
+    file.stream.seek(0)
+    if size > MAX_COVER_BYTES:
+        return jsonify({"error": "Fichier trop volumineux (max 5 Mo)"}), 400
+    name = secrets.token_hex(8) + "." + ext
+    file.save(os.path.join(COVERS_DIR, name))
+    return jsonify({"url": "/uploads/covers/" + name})
+
+
+@app.route("/uploads/<path:filename>")
+def serve_upload(filename):
+    """Sert les fichiers téléversés (couvertures de livres, etc.)."""
+    fullpath = os.path.join(UPLOADS_DIR, filename)
+    if not os.path.exists(fullpath):
+        return Response("Fichier non trouvé", status=404)
+    return send_from_directory(UPLOADS_DIR, filename)
 
 
 @app.route("/<path:filename>")
