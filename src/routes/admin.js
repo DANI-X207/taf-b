@@ -1,10 +1,34 @@
 const express = require("express");
 const crypto = require("crypto");
+const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 const { getDb, nowIso } = require("../db");
 const { cleanText, cleanUrl } = require("../helpers");
 const { requireAdmin } = require("../middleware");
 
 const router = express.Router();
+
+const COVERS_DIR = path.join(__dirname, "..", "..", "public", "uploads", "covers");
+fs.mkdirSync(COVERS_DIR, { recursive: true });
+
+const ALLOWED_MIME = { "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp", "image/gif": ".gif" };
+
+const coverStorage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, COVERS_DIR),
+  filename: (req, file, cb) => {
+    const ext = ALLOWED_MIME[file.mimetype] || path.extname(file.originalname).toLowerCase() || ".bin";
+    cb(null, crypto.randomBytes(8).toString("hex") + ext);
+  },
+});
+const uploadCover = multer({
+  storage: coverStorage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    if (!ALLOWED_MIME[file.mimetype]) return cb(new Error("Format d'image non supporté (PNG, JPG, WEBP, GIF uniquement)."));
+    cb(null, true);
+  },
+});
 
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "TAF1-FLEMME";
 const ADMIN_PASSWORD_SUPER = process.env.ADMIN_PASSWORD_SUPER || "MMDE2007";
@@ -196,6 +220,19 @@ router.post("/api/admin/ads", requireAdmin(), async (req, res) => {
   } catch (e) {
     return res.status(400).json({ error: e.message });
   }
+});
+
+router.post("/api/admin/upload-cover", requireAdmin(), (req, res) => {
+  uploadCover.single("file")(req, res, (err) => {
+    if (err) {
+      const msg = err.code === "LIMIT_FILE_SIZE"
+        ? "Image trop volumineuse (max 5 Mo)."
+        : (err.message || "Téléversement impossible.");
+      return res.status(400).json({ error: msg });
+    }
+    if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu." });
+    return res.json({ success: true, url: "/uploads/covers/" + req.file.filename });
+  });
 });
 
 router.delete("/api/admin/ads/:id", requireAdmin(), async (req, res) => {

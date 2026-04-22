@@ -49,6 +49,7 @@ app.use("/:file.css", (req, res, next) => {
 app.use("/ext", express.static(PUBLIC_IMG));
 app.use("/img", express.static(PUBLIC_IMG));
 app.use("/js", express.static(PUBLIC_JS));
+app.use("/uploads", express.static(path.join(__dirname, "public", "uploads")));
 app.use("/res", (req, res, next) => {
   const resDir = path.join(PUBLIC_HTML, "res");
   res.sendFile(req.path, { root: resDir }, (err) => {

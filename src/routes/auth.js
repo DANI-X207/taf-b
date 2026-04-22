@@ -82,17 +82,14 @@ router.post("/auth/login", async (req, res) => {
     const password = String(data.password || "");
     const db = await getDb();
     let matchedRow = null;
-    const isEmail = identifier.includes("@");
-    if (isEmail) {
-      const row = await db.get("SELECT * FROM users WHERE LOWER(email) = LOWER(?)", identifier);
-      if (row && await bcrypt.compare(password, row.password_hash)) matchedRow = row;
-    } else {
-      const candidates = await db.all("SELECT * FROM users WHERE LOWER(name) = LOWER(?)", identifier);
-      for (const candidate of candidates) {
-        if (await bcrypt.compare(password, candidate.password_hash)) {
-          matchedRow = candidate;
-          break;
-        }
+    const candidates = await db.all(
+      "SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(?) OR LOWER(TRIM(name)) = LOWER(?)",
+      identifier, identifier
+    );
+    for (const candidate of candidates) {
+      if (candidate.password_hash && await bcrypt.compare(password, candidate.password_hash)) {
+        matchedRow = candidate;
+        break;
       }
     }
     if (!matchedRow) {

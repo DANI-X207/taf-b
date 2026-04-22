@@ -39,6 +39,7 @@ function normalizePhone(value) {
 function cleanUrl(value, maxLen = 700) {
   const url = cleanText(value, maxLen);
   if (!url) return "";
+  if (url.startsWith("/")) return url;
   try {
     const parsed = new URL(url);
     if (!["http:", "https:"].includes(parsed.protocol)) throw new Error();
