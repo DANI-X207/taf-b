@@ -458,10 +458,8 @@ button,.link{{display:inline-block;background:#ff690c;color:#fff;border:0;border
 
 def serve_html(filename):
     """Sert les pages HTML importées en conservant le frontend existant et en appliquant les protections serveur."""
-    if filename in AUTH_PAGES:
-        if is_authenticated():
-            return redirect(url_for("index"))
-        return serve_auth_page()
+    if filename in AUTH_PAGES and is_authenticated():
+        return redirect(url_for("index"))
     if filename in PROTECTED_PAGES and not is_authenticated():
         return redirect(url_for("html_page", filename="login"))
     filepath = os.path.join(PUBLIC_HTML, filename)
