@@ -148,6 +148,10 @@ router.post("/api/orders", requireUser(), async (req, res) => {
     );
     const orderId = orderResult.lastID;
 
+    if (user && !(user.phone || "").trim() && customer_phone) {
+      await db.run("UPDATE users SET phone = ? WHERE id = ?", customer_phone, user.id);
+    }
+
     for (const item of validItems) {
       await db.run(
         "INSERT INTO order_items (order_id, book_id, titre, auteur, prix, qty, image) VALUES (?,?,?,?,?,?,?)",

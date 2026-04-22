@@ -1014,6 +1014,8 @@ def create_order():
         ((user or {}).get("id"), customer_name, customer_email, customer_phone, delivery_zone, delivery_address, total, "En attente", "pending", tracking_token, created_at, created_at),
     )
     order_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+    if user and not (user.get("phone") or "").strip() and customer_phone:
+        conn.execute("UPDATE users SET phone = ? WHERE id = ?", (customer_phone, user["id"]))
     for item in valid_items:
         conn.execute(
             "INSERT INTO order_items (order_id, book_id, titre, auteur, prix, qty, image) VALUES (?,?,?,?,?,?,?)",
