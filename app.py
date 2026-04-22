@@ -1293,6 +1293,147 @@ def download_source_zip():
     return send_file(buffer, mimetype="application/zip", as_attachment=True, download_name="librairie-magma-source.zip")
 
 
+def _build_source_archive(extra_files=None):
+    """Construit un ZIP du code source en excluant les artefacts régénérables."""
+    excluded_dirs = {".git", ".cache", ".pythonlibs", "__pycache__", ".local", "node_modules", "attached_assets", ".upm"}
+    excluded_files = {"data/bookstore.db"}
+    buffer = io.BytesIO()
+    with zipfile.ZipFile(buffer, "w", zipfile.ZIP_DEFLATED) as archive:
+        for root, dirs, files in os.walk(BASE_DIR):
+            rel_root = os.path.relpath(root, BASE_DIR)
+            dirs[:] = [d for d in dirs if d not in excluded_dirs and os.path.join(rel_root, d).replace(os.sep, "/").strip("./") not in excluded_dirs]
+            for filename in files:
+                full_path = os.path.join(root, filename)
+                rel_path = os.path.relpath(full_path, BASE_DIR)
+                normalized = rel_path.replace(os.sep, "/")
+                if normalized in excluded_files or normalized.endswith(".pyc"):
+                    continue
+                if any(normalized.startswith(d + "/") for d in excluded_dirs):
+                    continue
+                archive.write(full_path, normalized)
+        existing = set(archive.namelist())
+        for name, content in (extra_files or {}).items():
+            if name not in existing:
+                archive.writestr(name, content)
+    buffer.seek(0)
+    return buffer
+
+
+@app.route("/api/source-render.zip", methods=["GET"])
+def download_source_render_zip():
+    """Télécharge un ZIP prêt pour un déploiement Render (Flask + gunicorn)."""
+    if not is_authenticated():
+        return redirect(url_for("html_page", filename="login"))
+    render_yaml = (
+        "services:\n"
+        "  - type: web\n"
+        "    name: librairie-magma\n"
+        "    runtime: python\n"
+        "    plan: free\n"
+        "    buildCommand: pip install -r requirements.txt\n"
+        "    startCommand: gunicorn --bind 0.0.0.0:$PORT main:app\n"
+        "    envVars:\n"
+        "      - key: PYTHON_VERSION\n"
+        "        value: 3.11.0\n"
+        "      - key: SESSION_SECRET\n"
+        "        generateValue: true\n"
+    )
+    procfile = "web: gunicorn --bind 0.0.0.0:$PORT main:app\n"
+    env_example = (
+        "PORT=5000\n"
+        "SESSION_SECRET=change-me\n"
+        "# SMTP_HOST=\n"
+        "# SMTP_PORT=587\n"
+        "# SMTP_USER=\n"
+        "# SMTP_PASSWORD=\n"
+        "# SMTP_FROM=\n"
+        "# ORDER_EMAIL=\n"
+    )
+    requirements = (
+        "flask>=3.0\n"
+        "gunicorn>=21.2\n"
+        "email-validator>=2.0\n"
+        "reportlab>=4.0\n"
+        "werkzeug>=3.0\n"
+    )
+    readme = (
+        "# Librairie Magma — Déploiement Render\n\n"
+        "## Étapes\n"
+        "1. Créez un compte sur https://render.com\n"
+        "2. New + → Web Service → connectez votre dépôt Git contenant ces fichiers.\n"
+        "3. Render lit automatiquement `render.yaml`:\n"
+        "   - Runtime: Python 3.11\n"
+        "   - Build: `pip install -r requirements.txt`\n"
+        "   - Start: `gunicorn --bind 0.0.0.0:$PORT main:app`\n"
+        "4. `SESSION_SECRET` est généré automatiquement par Render.\n"
+        "5. (optionnel) Ajoutez `SMTP_HOST`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` pour l'envoi d'emails.\n\n"
+        "## Note SQLite\n"
+        "La base SQLite `data/bookstore.db` est créée au démarrage. Sur le plan gratuit Render le disque est éphémère :\n"
+        "ajoutez un Disk dans le dashboard et montez-le sur `/opt/render/project/src/data` pour la persistance.\n"
+    )
+    extras = {
+        "render.yaml": render_yaml,
+        "Procfile": procfile,
+        ".env.example": env_example,
+        "requirements.txt": requirements,
+        "RENDER.md": readme,
+    }
+    buffer = _build_source_archive(extras)
+    return send_file(buffer, mimetype="application/zip", as_attachment=True, download_name="librairie-magma-render.zip")
+
+
+@app.route("/api/source-railway.zip", methods=["GET"])
+def download_source_railway_zip():
+    """Télécharge un ZIP prêt pour un déploiement Railway."""
+    if not is_authenticated():
+        return redirect(url_for("html_page", filename="login"))
+    procfile = "web: gunicorn --bind 0.0.0.0:$PORT main:app\n"
+    railway_json = json.dumps({
+        "$schema": "https://railway.app/railway.schema.json",
+        "build": {"builder": "NIXPACKS"},
+        "deploy": {
+            "startCommand": "gunicorn --bind 0.0.0.0:$PORT main:app",
+            "restartPolicyType": "ON_FAILURE",
+            "restartPolicyMaxRetries": 10,
+        },
+    }, indent=2) + "\n"
+    nixpacks = "[phases.setup]\nnixPkgs = ['python311']\n\n[start]\ncmd = 'gunicorn --bind 0.0.0.0:$PORT main:app'\n"
+    env_example = (
+        "PORT=5000\n"
+        "SESSION_SECRET=change-me\n"
+        "# SMTP_HOST=\n"
+        "# SMTP_PORT=587\n"
+        "# SMTP_USER=\n"
+        "# SMTP_PASSWORD=\n"
+        "# SMTP_FROM=\n"
+        "# ORDER_EMAIL=\n"
+    )
+    requirements = (
+        "flask>=3.0\n"
+        "gunicorn>=21.2\n"
+        "email-validator>=2.0\n"
+        "reportlab>=4.0\n"
+        "werkzeug>=3.0\n"
+    )
+    readme = (
+        "# Librairie Magma — Déploiement Railway\n\n"
+        "1. Créez un nouveau projet Railway et importez ce dossier.\n"
+        "2. Définissez les variables d'environnement (voir `.env.example`).\n"
+        "3. Railway détecte Python automatiquement et utilise `gunicorn` comme commande de démarrage.\n"
+        "4. L'application écoute sur le port défini par `PORT`.\n"
+    )
+    extras = {
+        "Procfile": procfile,
+        "railway.json": railway_json,
+        "nixpacks.toml": nixpacks,
+        ".env.example": env_example,
+        "requirements.txt": requirements,
+        "RAILWAY.md": readme,
+    }
+    buffer = _build_source_archive(extras)
+    return send_file(buffer, mimetype="application/zip", as_attachment=True, download_name="librairie-magma-railway.zip")
+
+
 @app.route("/download-source.zip", methods=["GET"])
 def download_source_zip_alias():
     """Alias lisible pour télécharger le code source complet."""
