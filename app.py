@@ -273,6 +273,7 @@ def init_db():
     add_column_if_missing(conn, "orders", "tracking_token", "TEXT DEFAULT ''")
     add_column_if_missing(conn, "orders", "updated_at", "TEXT DEFAULT ''")
     add_column_if_missing(conn, "users", "is_active", "INTEGER NOT NULL DEFAULT 1")
+    add_column_if_missing(conn, "users", "phone", "TEXT DEFAULT ''")
     conn.execute("""
         CREATE TABLE IF NOT EXISTS order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -641,6 +642,8 @@ def auth_register():
         name = clean_text(data.get("name") or data.get("username"), 120, True)
         email = clean_email(data.get("email"))
         password = clean_password(data.get("password"))
+        phone_raw = data.get("phone") or data.get("telephone") or ""
+        phone = clean_phone(phone_raw) if str(phone_raw).strip() else ""
     except ValueError as exc:
         if request.is_json:
             return jsonify({"error": str(exc)}), 400
@@ -648,8 +651,8 @@ def auth_register():
     conn = get_db()
     try:
         conn.execute(
-            "INSERT INTO users (name, email, password_hash, created_at) VALUES (?,?,?,?)",
-            (name, email, generate_password_hash(password), now_iso()),
+            "INSERT INTO users (name, email, phone, password_hash, created_at) VALUES (?,?,?,?,?)",
+            (name, email, phone, generate_password_hash(password), now_iso()),
         )
         conn.commit()
         user_id = conn.execute("SELECT last_insert_rowid()").fetchone()[0]

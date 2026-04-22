@@ -242,7 +242,7 @@
       <div class="nav-item" data-section="books"><span class="icon">📚</span><span>Livres</span></div>
       <div class="nav-item" data-section="orders"><span class="icon">📦</span><span>Commandes</span></div>
       <div class="nav-item" data-section="ads"><span class="icon">📢</span><span>Publicités</span></div>
-      <div class="nav-item" data-section="downloads"><span class="icon">⬇️</span><span>Téléchargements</span></div>
+      <div class="nav-item" data-section="downloads" data-super-only="1"><span class="icon">⬇️</span><span>Téléchargements</span></div>
     </nav>
     <div class="sidebar-footer">
       <a href="/">← Retour au catalogue</a>
@@ -390,7 +390,7 @@
     </div>
 
     <!-- DOWNLOADS -->
-    <div class="section" id="section-downloads">
+    <div class="section" id="section-downloads" data-super-only="1">
       <div class="page-header"><div><h2>Téléchargements</h2><p>Ressources accessibles uniquement à l'administrateur</p></div></div>
       <div class="card">
         <h3>Code source du projet</h3>
@@ -980,7 +980,16 @@
   }
 
   /* ── INIT ── */
+  function applyRoleVisibility(role) {
+    var isSuper = role === "super";
+    document.querySelectorAll('[data-super-only]').forEach(function (el) {
+      el.style.display = isSuper ? "" : "none";
+    });
+  }
+  applyRoleVisibility(window.MAGMA_ADMIN_ROLE || null);
+
   get("/api/admin/status").then(function (s) {
+    applyRoleVisibility(s.role || window.MAGMA_ADMIN_ROLE || null);
     if (s.authenticated) { loginScreen.style.display = "none"; dashboard.style.display = "block"; loadDashboard(); }
   }).catch(function () {});
 })();
