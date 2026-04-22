@@ -521,15 +521,15 @@
     shell.id = "magma-login-shell";
     shell.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#e8e8e8;font-family:Arial,sans-serif;";
     shell.innerHTML =
-      '<div style="display:flex;width:min(900px,96vw);min-height:480px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18);">' +
-        '<div style="flex:1;position:relative;background:url(\'/img/WhatsApp%20Image%202025-11-19%20at%2012.10.23.jpeg\') center center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-start;padding:28px 32px 32px;min-width:260px;">' +
+      '<div class="magma-auth-card" style="display:flex;width:min(900px,96vw);min-height:480px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.18);">' +
+        '<div class="magma-auth-left" style="flex:1;position:relative;background:url(\'/img/WhatsApp%20Image%202025-11-19%20at%2012.10.23.jpeg\') center center/cover no-repeat;display:flex;flex-direction:column;justify-content:flex-start;padding:28px 32px 32px;min-width:260px;">' +
           '<div style="position:absolute;inset:0;background:rgba(30,40,30,.35);z-index:0;"></div>' +
           '<div style="position:relative;z-index:1;">' +
             '<div style="width:54px;height:54px;margin-bottom:28px;"><img src="/img/Logo version mobile.png" alt="Logo" style="width:100%;height:100%;object-fit:contain;"></div>' +
             '<h2 style="font-size:28px;font-weight:900;color:#fff;line-height:1.25;letter-spacing:.3px;margin:0;">Connecter vous sur<br>Magma</h2>' +
           '</div>' +
         '</div>' +
-        '<div style="width:380px;flex-shrink:0;background:#f9f9f9;display:flex;flex-direction:column;justify-content:center;padding:48px 40px;">' +
+        '<div class="magma-auth-right" style="width:380px;flex-shrink:0;background:#f9f9f9;display:flex;flex-direction:column;justify-content:center;padding:48px 40px;">' +
           '<h1 style="font-size:32px;font-weight:400;color:#888;margin:0 0 8px;">Login</h1>' +
           '<p style="font-size:14px;color:#888;margin:0 0 28px;line-height:1.5;">Bienvenu entrer votre identifiant<br>s\'il vous plait</p>' +
           errHtml +
@@ -587,8 +587,8 @@
     shell.id = "magma-register-shell";
     shell.style.cssText = "position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:#e8e8e8;font-family:Arial,sans-serif;";
     shell.innerHTML =
-      '<div style="display:flex;width:min(900px,96vw);min-height:520px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.22);">' +
-        '<div style="flex:1;position:relative;background:#2b293a;display:flex;flex-direction:column;justify-content:space-between;padding:36px 32px 40px;min-width:260px;">' +
+      '<div class="magma-auth-card" style="display:flex;width:min(900px,96vw);min-height:520px;border-radius:6px;overflow:hidden;box-shadow:0 8px 32px rgba(0,0,0,.22);">' +
+        '<div class="magma-auth-left" style="flex:1;position:relative;background:#2b293a;display:flex;flex-direction:column;justify-content:space-between;padding:36px 32px 40px;min-width:260px;">' +
           '<div>' +
             '<div style="width:54px;height:54px;margin-bottom:32px;"><img src="/img/Logo version mobile.png" alt="Logo" style="width:100%;height:100%;object-fit:contain;filter:brightness(0) invert(1);"></div>' +
             '<h2 style="font-size:26px;font-weight:900;color:#fff;line-height:1.3;margin:0 0 12px;">Rejoignez<br>Librairie Magma</h2>' +
@@ -598,7 +598,7 @@
             '<p style="color:rgba(255,255,255,.5);font-size:12px;margin:0;">Déjà un compte ? <a href="/login.html" style="color:#ff690c;text-decoration:none;font-weight:700;">Se connecter</a></p>' +
           '</div>' +
         '</div>' +
-        '<div style="width:400px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;justify-content:center;padding:48px 40px;">' +
+        '<div class="magma-auth-right" style="width:400px;flex-shrink:0;background:#fff;display:flex;flex-direction:column;justify-content:center;padding:48px 40px;">' +
           '<h1 style="font-size:26px;font-weight:700;color:#2b293a;margin:0 0 4px;">Créer un compte</h1>' +
           '<p style="font-size:14px;color:#999;margin:0 0 28px;line-height:1.5;">Remplissez le formulaire pour commencer</p>' +
           errHtml +
