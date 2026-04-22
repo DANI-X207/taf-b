@@ -176,12 +176,15 @@ router.get("/:filename([^/]+\\.html)", (req, res) => serveHtml(req.params.filena
 
 router.get(/^\/(.+\.html)$/, (req, res) => serveHtml(req.params[0], req, res));
 
-router.get("/api/ads", (req, res) => {
-  const { getDb } = require("../db");
-  const db = getDb();
-  const ads = db.prepare("SELECT * FROM ads WHERE active = 1 ORDER BY id DESC").all();
-  db.close();
-  res.json(ads);
+router.get("/api/ads", async (req, res) => {
+  try {
+    const { getDb } = require("../db");
+    const db = await getDb();
+    const ads = await db.all("SELECT * FROM ads WHERE active = 1 ORDER BY id DESC");
+    res.json(ads);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 function requireSuperAdmin(req, res) {

@@ -13,8 +13,6 @@ const reviewsRouter = require("./src/routes/reviews");
 const adminRouter = require("./src/routes/admin");
 const { router: pagesRouter } = require("./src/routes/pages");
 
-initDb();
-
 const app = express();
 
 app.set("trust proxy", 1);
@@ -79,8 +77,15 @@ app.use((req, res) => {
 });
 
 const PORT = parseInt(process.env.PORT || "5000");
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`Librairie Magma running on http://0.0.0.0:${PORT}`);
-});
+initDb()
+  .then(() => {
+    app.listen(PORT, "0.0.0.0", () => {
+      console.log(`Librairie Magma running on http://0.0.0.0:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Database initialization failed:", err);
+    process.exit(1);
+  });
 
 module.exports = app;

@@ -5,40 +5,49 @@ const { requireUser, requireAdmin } = require("../middleware");
 
 const router = express.Router();
 
-router.get("/api/books", requireUser(), (req, res) => {
-  const genre = cleanText(req.query.genre || "", 80);
-  const search = cleanText(req.query.search || "", 120);
-  const db = getDb();
-  let query = "SELECT * FROM books WHERE 1=1";
-  const params = [];
-  if (genre) { query += " AND genre = ?"; params.push(genre); }
-  if (search) {
-    query += " AND (titre LIKE ? OR auteur LIKE ? OR genre LIKE ? OR description LIKE ?)";
-    const s = `%${search}%`;
-    params.push(s, s, s, s);
+router.get("/api/books", requireUser(), async (req, res) => {
+  try {
+    const genre = cleanText(req.query.genre || "", 80);
+    const search = cleanText(req.query.search || "", 120);
+    const db = await getDb();
+    let query = "SELECT * FROM books WHERE 1=1";
+    const params = [];
+    if (genre) { query += " AND genre = ?"; params.push(genre); }
+    if (search) {
+      query += " AND (titre LIKE ? OR auteur LIKE ? OR genre LIKE ? OR description LIKE ?)";
+      const s = `%${search}%`;
+      params.push(s, s, s, s);
+    }
+    query += " ORDER BY featured DESC, id DESC";
+    const books = (await db.all(query, ...params)).map(rowToBook);
+    res.json(books);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
   }
-  query += " ORDER BY featured DESC, id DESC";
-  const books = db.prepare(query).all(...params).map(rowToBook);
-  db.close();
-  res.json(books);
 });
 
-router.get("/api/books/featured", requireUser(), (req, res) => {
-  const db = getDb();
-  const books = db.prepare("SELECT * FROM books WHERE featured = 1 ORDER BY id DESC").all().map(rowToBook);
-  db.close();
-  res.json(books);
+router.get("/api/books/featured", requireUser(), async (req, res) => {
+  try {
+    const db = await getDb();
+    const books = (await db.all("SELECT * FROM books WHERE featured = 1 ORDER BY id DESC")).map(rowToBook);
+    res.json(books);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.get("/api/books/:id", requireUser(), (req, res) => {
-  const db = getDb();
-  const row = db.prepare("SELECT * FROM books WHERE id = ?").get(parseInt(req.params.id));
-  db.close();
-  if (!row) return res.status(404).json({ error: "Livre non trouvé" });
-  res.json(rowToBook(row));
+router.get("/api/books/:id", requireUser(), async (req, res) => {
+  try {
+    const db = await getDb();
+    const row = await db.get("SELECT * FROM books WHERE id = ?", parseInt(req.params.id));
+    if (!row) return res.status(404).json({ error: "Livre non trouvé" });
+    res.json(rowToBook(row));
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.post("/api/books", requireAdmin(), (req, res) => {
+router.post("/api/books", requireAdmin(), async (req, res) => {
   const data = req.body || {};
   try {
     const titre = cleanText(data.titre, 160, true);
@@ -47,19 +56,19 @@ router.post("/api/books", requireAdmin(), (req, res) => {
     const prix = cleanInt(data.prix, 1);
     if (prix <= 0) throw new Error("Prix invalide");
     const image = cleanUrl(data.image, 700);
-    const db = getDb();
-    const result = db.prepare(
-      "INSERT INTO books (titre, auteur, genre, prix, description, image, stock, featured, infos, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
-    ).run(titre, auteur, genre, prix, cleanText(data.description, 1200), image, cleanInt(data.stock, 0, 10), data.featured ? 1 : 0, cleanText(data.infos, 1000), nowIso());
-    const book = rowToBook(db.prepare("SELECT * FROM books WHERE id = ?").get(result.lastInsertRowid));
-    db.close();
+    const db = await getDb();
+    const result = await db.run(
+      "INSERT INTO books (titre, auteur, genre, prix, description, image, stock, featured, infos, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)",
+      titre, auteur, genre, prix, cleanText(data.description, 1200), image, cleanInt(data.stock, 0, 10), data.featured ? 1 : 0, cleanText(data.infos, 1000), nowIso()
+    );
+    const book = rowToBook(await db.get("SELECT * FROM books WHERE id = ?", result.lastID));
     return res.status(201).json(book);
   } catch (e) {
     return res.status(400).json({ error: e.message });
   }
 });
 
-router.put("/api/books/:id", requireAdmin(), (req, res) => {
+router.put("/api/books/:id", requireAdmin(), async (req, res) => {
   const data = req.body || {};
   try {
     const titre = cleanText(data.titre, 160, true);
@@ -68,38 +77,47 @@ router.put("/api/books/:id", requireAdmin(), (req, res) => {
     const prix = cleanInt(data.prix, 1);
     if (prix <= 0) throw new Error("Prix invalide");
     const image = cleanUrl(data.image, 700);
-    const db = getDb();
-    const result = db.prepare(
-      "UPDATE books SET titre=?, auteur=?, genre=?, prix=?, description=?, image=?, stock=?, featured=?, infos=? WHERE id=?"
-    ).run(titre, auteur, genre, prix, cleanText(data.description, 1200), image, cleanInt(data.stock, 0, 10), data.featured ? 1 : 0, cleanText(data.infos, 1000), parseInt(req.params.id));
-    if (result.changes === 0) { db.close(); return res.status(404).json({ error: "Livre non trouvé" }); }
-    const book = rowToBook(db.prepare("SELECT * FROM books WHERE id = ?").get(parseInt(req.params.id)));
-    db.close();
+    const db = await getDb();
+    const result = await db.run(
+      "UPDATE books SET titre=?, auteur=?, genre=?, prix=?, description=?, image=?, stock=?, featured=?, infos=? WHERE id=?",
+      titre, auteur, genre, prix, cleanText(data.description, 1200), image, cleanInt(data.stock, 0, 10), data.featured ? 1 : 0, cleanText(data.infos, 1000), parseInt(req.params.id)
+    );
+    if (result.changes === 0) return res.status(404).json({ error: "Livre non trouvé" });
+    const book = rowToBook(await db.get("SELECT * FROM books WHERE id = ?", parseInt(req.params.id)));
     return res.json(book);
   } catch (e) {
     return res.status(400).json({ error: e.message });
   }
 });
 
-router.delete("/api/books/:id", requireAdmin(), (req, res) => {
-  const db = getDb();
-  db.prepare("DELETE FROM books WHERE id = ?").run(parseInt(req.params.id));
-  db.close();
-  res.json({ success: true });
+router.delete("/api/books/:id", requireAdmin(), async (req, res) => {
+  try {
+    const db = await getDb();
+    await db.run("DELETE FROM books WHERE id = ?", parseInt(req.params.id));
+    res.json({ success: true });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.get("/api/genres", requireUser(), (req, res) => {
-  const db = getDb();
-  const genres = db.prepare("SELECT DISTINCT genre FROM books ORDER BY genre").all().map((r) => r.genre);
-  db.close();
-  res.json(genres);
+router.get("/api/genres", requireUser(), async (req, res) => {
+  try {
+    const db = await getDb();
+    const genres = (await db.all("SELECT DISTINCT genre FROM books ORDER BY genre")).map((r) => r.genre);
+    res.json(genres);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
-router.get("/api/books/:id/reviews", requireUser(), (req, res) => {
-  const db = getDb();
-  const reviews = db.prepare("SELECT * FROM reviews WHERE book_id = ? ORDER BY id DESC").all(parseInt(req.params.id));
-  db.close();
-  res.json(reviews);
+router.get("/api/books/:id/reviews", requireUser(), async (req, res) => {
+  try {
+    const db = await getDb();
+    const reviews = await db.all("SELECT * FROM reviews WHERE book_id = ? ORDER BY id DESC", parseInt(req.params.id));
+    res.json(reviews);
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
 });
 
 module.exports = router;
