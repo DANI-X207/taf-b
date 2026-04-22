@@ -1034,3 +1034,191 @@ body.admin-page #magma-order-search-input {
 body.admin-page #magma-order-search-input:focus {
   box-shadow: 0 0 0 3px rgba(29,78,216,.15);
 }
+
+/* =========================================================
+   RESPONSIVE — Mobile / Tablet (Android, iOS, all devices)
+   Applies to all WEBDEV pages exported in absolute layout.
+   We override the fixed pixel widths so the site reflows
+   gracefully on small screens.
+   ========================================================= */
+
+html, body {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+img, video, iframe { max-width: 100%; height: auto; }
+
+/* ---------- Tablet & below (≤1024px) ---------- */
+@media (max-width: 1024px) {
+  body, .pageContainer, #PAGE, .pageBackground, .body-bg, .body_bg {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+  /* WEBDEV exports use absolute positioning with px coords. Force key
+     containers to flow normally below tablet width. */
+  .pageBody, .page-body, [id^="PAGEMOD_"], [id^="PAGE_"] {
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+}
+
+/* ---------- Phones (≤768px) ---------- */
+@media (max-width: 768px) {
+  /* Reset WEBDEV absolute layout to a vertical flow on phones */
+  body * {
+    max-width: 100% !important;
+  }
+  /* Convert WEBDEV absolute boxes to relative so they stack */
+  div[style*="position: absolute"],
+  div[style*="position:absolute"],
+  table[style*="position: absolute"],
+  table[style*="position:absolute"] {
+    position: relative !important;
+    left: auto !important;
+    top: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    margin: 6px 0 !important;
+  }
+  /* Cancel the famous .pos45 fixed top margin on mobile */
+  .pos45 { margin-top: 16px !important; }
+
+  /* Catalog cards / book grid */
+  #magma-results, .book-grid, .magma-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)) !important;
+    gap: 12px !important;
+    padding: 10px !important;
+  }
+  .magma-card, .book-card { width: 100% !important; }
+
+  /* Search/tools bar */
+  #magma-tools, #magma-search, #magma-genre {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  #magma-tools { flex-direction: column !important; gap: 8px !important; }
+
+  /* Login / register cards */
+  main, .login-box, .auth-card, .magma-co {
+    width: 100% !important;
+    max-width: 100vw !important;
+    border-radius: 16px !important;
+    padding: 16px !important;
+    box-sizing: border-box !important;
+  }
+  .grid { grid-template-columns: 1fr !important; }
+
+  /* Buttons full-width on phones */
+  button, .btn, .magma-co__submit {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Top bar / Admin link */
+  #magma-admin-link, .admin-top-link {
+    top: 8px !important;
+    right: 8px !important;
+    padding: 8px 14px !important;
+    font-size: 13px !important;
+  }
+}
+
+/* ---------- Admin dashboard responsive ---------- */
+@media (max-width: 1024px) {
+  body.admin-page .sidebar,
+  body.admin-page #admin-dashboard .sidebar {
+    width: 220px !important;
+  }
+}
+@media (max-width: 768px) {
+  body.admin-page #admin-dashboard {
+    flex-direction: column !important;
+    display: block !important;
+  }
+  body.admin-page .sidebar,
+  body.admin-page #admin-dashboard .sidebar {
+    position: relative !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0 !important;
+    box-shadow: none !important;
+    border-bottom: 1px solid #eee;
+  }
+  body.admin-page .sidebar-nav,
+  body.admin-page #admin-dashboard .sidebar-nav {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    padding: 10px !important;
+  }
+  body.admin-page .sidebar-nav .nav-item,
+  body.admin-page #admin-dashboard .nav-item {
+    flex: 1 1 45% !important;
+    min-width: 140px !important;
+    font-size: 13px !important;
+    padding: 10px 12px !important;
+  }
+  body.admin-page .main-content,
+  body.admin-page #admin-dashboard .main-content {
+    margin-left: 0 !important;
+    padding: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  body.admin-page .stats-grid,
+  body.admin-page .cards-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+  }
+  body.admin-page .order-card,
+  body.admin-page .card {
+    padding: 12px !important;
+  }
+  body.admin-page table {
+    display: block !important;
+    overflow-x: auto !important;
+    width: 100% !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  body.admin-page #magma-order-search {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  body.admin-page #magma-order-search-input,
+  body.admin-page #magma-order-search-clear {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+  body.admin-page .modal,
+  body.admin-page .modal-content {
+    width: 95vw !important;
+    max-width: 95vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+}
+
+/* ---------- Very small phones (≤420px) ---------- */
+@media (max-width: 420px) {
+  body.admin-page .stats-grid,
+  body.admin-page .cards-grid {
+    grid-template-columns: 1fr !important;
+  }
+  #magma-results, .book-grid, .magma-grid {
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)) !important;
+  }
+  h1 { font-size: 22px !important; }
+  h2 { font-size: 18px !important; }
+}
+
+/* ---------- Touch-friendly tap targets ---------- */
+@media (hover: none) and (pointer: coarse) {
+  button, a.link, .nav-item, input[type="submit"] {
+    min-height: 42px;
+  }
+}

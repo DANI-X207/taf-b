@@ -237,6 +237,70 @@ router.get("/api/source-railway.zip", (req, res) => {
   archive.finalize();
 });
 
+router.get("/api/source-render.zip", (req, res) => {
+  if (!requireSuperAdmin(req, res)) return;
+  res.setHeader("Content-Type", "application/zip");
+  res.setHeader("Content-Disposition", 'attachment; filename="librairie-magma-render.zip"');
+  const archive = archiver("zip", { zlib: { level: 9 } });
+  archive.pipe(res);
+  archive.glob("**/*", {
+    cwd: BASE_DIR,
+    ignore: [
+      ".git/**", ".cache/**", ".pythonlibs/**", "__pycache__/**", "node_modules/**",
+      ".local/**", "data/bookstore.db", "**/*.pyc", "attached_assets/**",
+      ".replit", "replit.nix",
+    ],
+  });
+  const procfile = "web: node server.js\n";
+  const renderYaml =
+`services:
+  - type: web
+    name: librairie-magma
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: ADMIN_PASSWORD_SUPER
+        sync: false
+`;
+  const envExample = "PORT=5000\nSESSION_SECRET=change-me\nADMIN_PASSWORD=TAF1-FLEMME\nADMIN_PASSWORD_SUPER=MMDE2007\n# SMTP_HOST=\n# SMTP_PORT=587\n# SMTP_USER=\n# SMTP_PASSWORD=\n# SMTP_FROM=\n# ORDER_EMAIL=\n";
+  const readme =
+`# Librairie Magma — Déploiement Render
+
+## Étapes
+1. Créez un compte sur https://render.com
+2. New + → Web Service → connectez votre dépôt Git contenant ces fichiers
+   (ou utilisez "Deploy from a public Git repo").
+3. Render lit automatiquement \`render.yaml\` :
+   - Runtime : Node 20
+   - Build : \`npm install\`
+   - Start : \`node server.js\`
+4. Définissez vos variables secrètes dans le dashboard Render :
+   - \`ADMIN_PASSWORD\`
+   - \`ADMIN_PASSWORD_SUPER\`
+   - (optionnel) \`SMTP_HOST\`, \`SMTP_USER\`, \`SMTP_PASSWORD\`, \`SMTP_FROM\`
+5. \`SESSION_SECRET\` est généré automatiquement par Render.
+6. L'application écoute sur le port défini par la variable \`PORT\` injectée par Render.
+
+## Note SQLite
+La base SQLite (\`data/bookstore.db\`) est créée au démarrage. Sur le plan
+gratuit Render, le disque est éphémère : pour la persistance, ajoutez un
+"Disk" dans le dashboard Render et montez-le sur \`/opt/render/project/src/data\`.
+`;
+  archive.append(procfile, { name: "Procfile" });
+  archive.append(renderYaml, { name: "render.yaml" });
+  archive.append(envExample, { name: ".env.example" });
+  archive.append(readme, { name: "RENDER.md" });
+  archive.finalize();
+});
+
 router.get("/download-source.zip", (req, res) => res.redirect("/api/source.zip"));
 
 module.exports = { router, authPageHtml };

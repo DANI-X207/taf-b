@@ -809,6 +809,10 @@
         if (rwNav) rwNav.remove();
         var rwSec = document.getElementById("section-downloads-railway");
         if (rwSec) rwSec.remove();
+        var rdNav = document.querySelector('#admin-dashboard .nav-item[data-section="downloads-render"]');
+        if (rdNav) rdNav.remove();
+        var rdSec = document.getElementById("section-downloads-render");
+        if (rdSec) rdSec.remove();
         return;
       }
       if (dlNav) dlNav.style.display = "";
@@ -849,6 +853,53 @@
           newNav.classList.add("active");
           document.querySelectorAll("#admin-dashboard .section").forEach(function (s) { s.style.display = "none"; });
           var s = document.getElementById("section-downloads-railway");
+          if (s) s.style.display = "block";
+        });
+      }
+
+      // ---- Render deployment (super admin only) ----
+      if (nav && !document.querySelector('#admin-dashboard .nav-item[data-section="downloads-render"]')) {
+        var itemR = document.createElement("div");
+        itemR.className = "nav-item";
+        itemR.setAttribute("data-section", "downloads-render");
+        itemR.innerHTML = '<span class="icon">🟣</span><span>Télécharger version Render</span>';
+        nav.appendChild(itemR);
+      }
+      if (main && !document.getElementById("section-downloads-render")) {
+        var secR = document.createElement("div");
+        secR.className = "section";
+        secR.id = "section-downloads-render";
+        secR.style.display = "none";
+        secR.innerHTML =
+          '<div class="page-header"><div><h2>Télécharger version Render</h2>' +
+          '<p>Archive prête à déployer sur Render (render.yaml, Procfile, README inclus).</p></div></div>' +
+          '<div class="card">' +
+            '<h3>Code source — version Render</h3>' +
+            '<p style="font-size:13px;color:#888;margin-bottom:20px;">Cette archive ZIP contient le projet sans les fichiers spécifiques à Replit, prêt à être déployé sur Render. Variables secrètes à définir dans le dashboard Render : ADMIN_PASSWORD, ADMIN_PASSWORD_SUPER.</p>' +
+            '<a href="/api/source-render.zip" class="download-card" style="border-color:#46b3ff;">' +
+              '<div class="dl-icon" style="font-size:32px;">🟣</div>' +
+              '<div class="dl-info"><strong>librairie-magma-render.zip</strong>' +
+              '<small>Configuration Render incluse — render.yaml prêt à l\'emploi</small></div>' +
+            '</a>' +
+            '<div style="margin-top:18px;padding:14px;background:#f7f9ff;border-radius:8px;font-size:13px;color:#444;line-height:1.6;">' +
+              '<strong>Étapes rapides :</strong><br>' +
+              '1. Téléchargez l\'archive et envoyez-la sur GitHub.<br>' +
+              '2. Sur <a href="https://render.com" target="_blank" rel="noopener">render.com</a> → New + → Web Service → connectez le dépôt.<br>' +
+              '3. Render lit <code>render.yaml</code> automatiquement (build : npm install, start : node server.js).<br>' +
+              '4. Définissez ADMIN_PASSWORD et ADMIN_PASSWORD_SUPER dans Environment.<br>' +
+              '5. Pour persister la base SQLite, ajoutez un Disk monté sur <code>/opt/render/project/src/data</code>.' +
+            '</div>' +
+          '</div>';
+        main.appendChild(secR);
+      }
+      var newNavR = document.querySelector('#admin-dashboard .nav-item[data-section="downloads-render"]');
+      if (newNavR && !newNavR._wired) {
+        newNavR._wired = true;
+        newNavR.addEventListener("click", function () {
+          document.querySelectorAll("#admin-dashboard .nav-item").forEach(function (n) { n.classList.remove("active"); });
+          newNavR.classList.add("active");
+          document.querySelectorAll("#admin-dashboard .section").forEach(function (s) { s.style.display = "none"; });
+          var s = document.getElementById("section-downloads-render");
           if (s) s.style.display = "block";
         });
       }
@@ -937,8 +988,14 @@
     if (page === "admin-login") watchAdminLoginRedirect();
     if (page === "admin") {
       watchAdminDashboard();
-      setTimeout(injectOrderSearchUi, 300);
-      setTimeout(injectOrderSearchUi, 1200);
+      // Order search bar for BOTH admin and super-admin: try multiple times
+      // and watch the dashboard for late renders.
+      [200, 600, 1200, 2500, 5000].forEach(function (d) { setTimeout(injectOrderSearchUi, d); });
+      if (window.MutationObserver) {
+        var dash = document.getElementById("admin-dashboard") || document.body;
+        new MutationObserver(function () { injectOrderSearchUi(); })
+          .observe(dash, { childList: true, subtree: true });
+      }
     }
     if (page === "home") wireHomeIcons();
     if (page !== "login" && page !== "register" && !isAdminAreaPage()) updateCartBadge();
