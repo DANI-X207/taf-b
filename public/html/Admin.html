@@ -29,7 +29,29 @@
     .login-box input:focus { border-color: #ff690c; background: #fff; }
     .login-box button { width: 100%; padding: 13px; background: #ff690c; color: #fff; font-size: 15px; font-weight: 700; border: none; border-radius: 4px; cursor: pointer; }
     .login-box button:hover { background: #e55a00; }
+    .login-box .btn-back {
+      display: inline-flex; align-items: center; gap: 6px;
+      margin-top: 16px; padding: 10px 16px; background: transparent; color: #888;
+      border: 1px solid #ddd; border-radius: 4px; font-size: 13px; font-weight: 600;
+      text-decoration: none; cursor: pointer; transition: all .15s; width: auto;
+    }
+    .login-box .btn-back:hover { background: #f4f4f4; color: #2b293a; border-color: #bbb; }
     .login-error { background: #fee4e2; color: #b42318; padding: 10px; border-radius: 4px; font-size: 13px; margin-bottom: 14px; }
+
+    /* ── RESPONSIVE LOGIN ── */
+    @media (max-width: 600px) {
+      .login-box { padding: 32px 22px; width: 94vw; max-width: 94vw; border-radius: 12px; }
+      .login-box h1 { font-size: 19px; }
+      .login-box p { font-size: 12px; margin-bottom: 22px; }
+      .login-box .logo { width: 50px; height: 50px; margin-bottom: 16px; }
+      .login-box input { font-size: 16px; padding: 13px 14px; } /* 16px prevents iOS zoom */
+      .login-box button { padding: 14px; font-size: 15px; min-height: 46px; }
+      #admin-login-screen { padding: 16px; }
+    }
+    @media (max-width: 380px) {
+      .login-box { padding: 24px 16px; }
+      .login-box h1 { font-size: 17px; }
+    }
 
     /* ── SHELL ── */
     #admin-dashboard { display: none; min-height: 100vh; }
@@ -203,6 +225,7 @@
     <div id="login-error" class="login-error" style="display:none;"></div>
     <input type="password" id="admin-password" placeholder="Mot de passe administrateur" autocomplete="current-password">
     <button id="admin-login-btn">Se connecter</button>
+    <a href="/" class="btn-back" id="admin-back-btn">← Retour à l'accueil</a>
   </div>
 </div>
 
