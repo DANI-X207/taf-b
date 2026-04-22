@@ -981,10 +981,57 @@
     }
   }
 
+  function showAdNotification(ad) {
+    var existing = document.getElementById("magma-ad-toast");
+    if (existing) existing.remove();
+    var box = document.createElement("div");
+    box.id = "magma-ad-toast";
+    box.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:999998;max-width:340px;background:#fff;border-left:4px solid #ff690c;border-radius:10px;box-shadow:0 18px 45px rgba(0,0,0,.22);padding:14px 16px 14px 18px;font-family:Arial,sans-serif;color:#2b293a;opacity:0;transform:translateY(12px);transition:opacity .3s,transform .3s;";
+    var title = ad.title || ad.titre || "Promotion";
+    var message = ad.message || "";
+    var link = ad.link || "";
+    var html = '<button type="button" id="magma-ad-close" aria-label="Fermer" style="position:absolute;top:6px;right:8px;background:transparent;border:0;font-size:18px;color:#888;cursor:pointer;line-height:1;">×</button>'
+      + '<div style="font-size:11px;font-weight:700;color:#ff690c;letter-spacing:.5px;text-transform:uppercase;margin-bottom:4px;">📣 Annonce</div>'
+      + '<div style="font-size:15px;font-weight:700;margin-bottom:4px;padding-right:16px;">' + esc(title) + '</div>'
+      + (message ? '<div style="font-size:13px;color:#555;line-height:1.4;">' + esc(message) + '</div>' : '');
+    if (link) {
+      html += '<a href="' + esc(link) + '" target="_blank" rel="noopener" style="display:inline-block;margin-top:10px;background:#ff690c;color:#fff;font-size:12px;font-weight:700;text-decoration:none;padding:7px 12px;border-radius:999px;">En savoir plus</a>';
+    }
+    box.innerHTML = html;
+    document.body.appendChild(box);
+    requestAnimationFrame(function () { box.style.opacity = "1"; box.style.transform = "translateY(0)"; });
+    function dismiss() {
+      box.style.opacity = "0";
+      box.style.transform = "translateY(12px)";
+      setTimeout(function () { if (box.parentNode) box.parentNode.removeChild(box); }, 300);
+    }
+    document.getElementById("magma-ad-close").addEventListener("click", dismiss);
+    setTimeout(dismiss, 9000);
+  }
+
+  function startAdRotator() {
+    var lastId = null;
+    function tick() {
+      fetch("/api/ads", { credentials: "same-origin" })
+        .then(function (r) { return r.ok ? r.json() : []; })
+        .then(function (ads) {
+          if (!Array.isArray(ads) || ads.length === 0) return;
+          var pool = ads.length > 1 ? ads.filter(function (a) { return a.id !== lastId; }) : ads;
+          var ad = pool[Math.floor(Math.random() * pool.length)];
+          lastId = ad.id;
+          showAdNotification(ad);
+        })
+        .catch(function () {});
+    }
+    setTimeout(tick, 5000 + Math.floor(Math.random() * 4000));
+    setInterval(tick, 30000 + Math.floor(Math.random() * 15000));
+  }
+
   function init() {
     applyTheme();
     var page = pageName();
     if (!isAdminAreaPage()) addAdminLink();
+    if (!isAdminAreaPage() && page !== "login" && page !== "register") startAdRotator();
     if (page === "admin-login") watchAdminLoginRedirect();
     if (page === "admin") {
       watchAdminDashboard();
