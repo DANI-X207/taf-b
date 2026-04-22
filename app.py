@@ -1,6 +1,7 @@
 """Application Flask de la librairie Magma avec catalogue, comptes clients, commandes, administration et export du code source."""
 
 import io
+import json
 import logging
 import os
 import re
@@ -47,6 +48,7 @@ PUBLIC_JS = os.path.join(BASE_DIR, "public", "js")
 
 SITE_NAME = "Librairie Magma"
 ADMIN_PASSWORD = "TAF1-FLEMME"
+ADMIN_PASSWORD_SUPER = "MMDE2007"
 ORDER_EMAIL_TO = "moussokiexauce7@gmail.com"
 CANCEL_WINDOW_MINUTES = 5
 ORDER_STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Annulée"]
@@ -1121,18 +1123,27 @@ def get_ads():
 @app.route("/api/admin/status", methods=["GET"])
 def admin_status():
     """Retourne l'état de connexion administrateur."""
-    return jsonify({"authenticated": require_admin()})
+    role = session.get("admin_role") or ("normal" if require_admin() else None)
+    return jsonify({"authenticated": require_admin(), "role": role})
 
 
 @app.route("/api/admin/login", methods=["POST"])
 def admin_login():
     """Connecte l'administrateur avec le mot de passe dédié."""
     data = request.get_json(silent=True) or {}
-    if secrets.compare_digest(str(data.get("password") or ""), ADMIN_PASSWORD):
+    password = str(data.get("password") or "")
+    if secrets.compare_digest(password, ADMIN_PASSWORD_SUPER):
         session.clear()
         session.permanent = True
         session["admin_authenticated"] = True
-        return jsonify({"success": True})
+        session["admin_role"] = "super"
+        return jsonify({"success": True, "role": "super"})
+    if secrets.compare_digest(password, ADMIN_PASSWORD):
+        session.clear()
+        session.permanent = True
+        session["admin_authenticated"] = True
+        session["admin_role"] = "normal"
+        return jsonify({"success": True, "role": "normal"})
     return jsonify({"error": "Mot de passe administrateur incorrect."}), 401
 
 
@@ -1140,7 +1151,49 @@ def admin_login():
 def admin_logout():
     """Déconnecte l'administrateur."""
     session.pop("admin_authenticated", None)
+    session.pop("admin_role", None)
     return jsonify({"success": True})
+
+
+def serve_admin_dashboard(role):
+    """Sert le tableau de bord admin/super-admin à partir de Admin.html."""
+    if not require_admin():
+        return redirect("/Admin.html")
+    current_role = session.get("admin_role") or "normal"
+    if current_role != role:
+        return redirect("/super-admin.html" if current_role == "super" else "/admin.html")
+    filepath = os.path.join(PUBLIC_HTML, "Admin.html")
+    if not os.path.exists(filepath):
+        return Response("Page non trouvée", status=404)
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+    title = SITE_NAME + (" — Super Admin" if role == "super" else " — Admin")
+    content = re.sub(r"<title>[^<]*</title>", f"<title>{title}</title>", content, count=1)
+    content = content.replace('<div id="admin-login-screen">', '<div id="admin-login-screen" style="display:none!important;">')
+    content = content.replace('<div id="admin-dashboard">', '<div id="admin-dashboard" style="display:block;">')
+    content = content.replace(
+        "</head>",
+        f'<script>window.MAGMA_ADMIN_ROLE={json.dumps(role)};window.MAGMA_ADMIN_PAGE=true;</script></head>',
+        1,
+    )
+    if "magma-fixes.css" not in content:
+        content = content.replace("</head>", '<link rel="stylesheet" type="text/css" href="/magma-fixes.css"></head>', 1)
+    if "/js/bookstore.js" not in content:
+        content = content.replace("</body>", '<script src="/js/bookstore.js"></script></body>', 1)
+    content = content.replace("<body>", f'<body class="admin-page admin-{role}">', 1)
+    return Response(content, mimetype="text/html")
+
+
+@app.route("/admin.html")
+def admin_dashboard_normal():
+    """Tableau de bord administrateur normal."""
+    return serve_admin_dashboard("normal")
+
+
+@app.route("/super-admin.html")
+def admin_dashboard_super():
+    """Tableau de bord super-administrateur."""
+    return serve_admin_dashboard("super")
 
 
 @app.route("/api/admin/orders", methods=["GET"])
