@@ -203,8 +203,30 @@
     <div id="login-error" class="login-error" style="display:none;"></div>
     <input type="password" id="admin-password" placeholder="Mot de passe administrateur" autocomplete="current-password">
     <button id="admin-login-btn">Se connecter</button>
+    <button type="button" id="admin-login-back" style="margin-top:10px;width:100%;padding:12px;background:transparent;color:#2b293a;border:1px solid #d0d0d0;border-radius:4px;font-size:14px;font-weight:600;cursor:pointer;">← Retour</button>
   </div>
 </div>
+
+<script>
+(function(){
+  document.addEventListener("DOMContentLoaded", function(){
+    var back = document.getElementById("admin-login-back");
+    if (!back) return;
+    back.addEventListener("click", function(){
+      if (document.referrer && document.referrer.indexOf(location.origin) === 0
+          && document.referrer.indexOf("/Admin") === -1
+          && document.referrer.indexOf("/admin") === -1
+          && document.referrer.indexOf("/super-admin") === -1) {
+        history.back();
+      } else if (history.length > 1) {
+        history.back();
+      } else {
+        window.location.href = "/";
+      }
+    });
+  });
+})();
+</script>
 
 <div id="admin-dashboard">
   <aside class="sidebar">
