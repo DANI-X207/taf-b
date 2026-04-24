@@ -66,12 +66,12 @@ PROTECTED_PAGES = {
     "Formulaire.html",
 }
 SEED_ADMIN_PHONES = [
-    ("065487909", 1),
-    ("050271841", 0),
-    ("064280982", 0),
-    ("066342094", 0),
-    ("066059986", 0),
-    ("069680847", 0),
+    ("065487909", 1),  # Super Admin
+    ("050271841", 1),  # Super Admin
+    ("064280982", 0),  # Admin simple
+    ("066342094", 0),  # Admin simple
+    ("066059986", 0),  # Admin simple
+    ("069680847", 0),  # Admin simple
 ]
 AUTH_PAGES = {"login.html", "connexion.html", "register.html", "inscription.html"}
 INJECT_SCRIPT = '<script src="/js/bookstore.js"></script></body>'
@@ -364,6 +364,26 @@ def init_db():
                     conn.execute("UPDATE admin_phones SET phone = ? WHERE id = ?", (formatted, row["id"]))
                 except sqlite3.IntegrityError:
                     conn.execute("DELETE FROM admin_phones WHERE id = ?", (row["id"],))
+        # Migration : aligne le rôle (super / simple) des numéros de la liste prédéfinie
+        for raw_phone, expected_super in SEED_ADMIN_PHONES:
+            target = format_phone(raw_phone)
+            for row in conn.execute("SELECT id, phone, is_super FROM admin_phones").fetchall():
+                if normalize_phone(row["phone"]) == normalize_phone(target):
+                    if int(row["is_super"]) != int(expected_super):
+                        conn.execute(
+                            "UPDATE admin_phones SET is_super = ? WHERE id = ?",
+                            (expected_super, row["id"]),
+                        )
+                    break
+            else:
+                # Le numéro prédéfini n'existe pas encore : on l'insère
+                try:
+                    conn.execute(
+                        "INSERT INTO admin_phones (phone, is_super, created_at, added_by) VALUES (?,?,?,?)",
+                        (target, expected_super, now_iso(), "system"),
+                    )
+                except sqlite3.IntegrityError:
+                    pass
 
     if conn.execute("SELECT COUNT(*) FROM books").fetchone()[0] == 0:
         books = [
