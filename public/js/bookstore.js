@@ -140,6 +140,7 @@
   }
 
   function initHome() {
+    if (window.MAGMA_HOMEPAGE_CUSTOM) return;
     var container = ensureCatalogContainer();
 
     var tools = document.getElementById("magma-catalog-tools");
