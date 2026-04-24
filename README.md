@@ -1,7 +1,24 @@
 # Librairie Magma — Librairie en Ligne
 
 ## Description
-Librairie Magma est une librairie en ligne Node.js/Express + SQLite. Le frontend WEBDEV exporté reste organisé en pages HTML séparées dans `public/html/` ; les protections, l'authentification et toutes les fonctionnalités métier sont gérées par le serveur Node.js.
+Librairie Magma est une librairie en ligne Python/Flask + SQLite. Le frontend WEBDEV exporté reste organisé en pages HTML séparées dans `public/html/` ; les protections, l'authentification et toutes les fonctionnalités métier sont gérées par le serveur Flask (`app.py`, point d'entrée `main.py` lancé par gunicorn sur le port 5000).
+
+## Mises à jour récentes (avril 2026)
+- **Page d'accueil conditionnelle** : les visiteurs anonymes voient `vitrine.html` (catalogue de présentation public), les utilisateurs connectés voient `Accueil-v2.html`.
+- **Catalogue public** : `/api/books`, `/api/books/<id>`, `/api/books/<id>/reviews` (GET), `/api/books/featured` et `/api/genres` ne nécessitent plus d'authentification — tout le monde peut feuilleter et lire les avis.
+- **Page détail livre `PI_Produit.html`** : entièrement reconstruite (couverture, titre, auteur, résumé, prix, stock, commentaires). Lecture publique ; ajouter au panier ou poster un avis redirige vers `/login.html` si non connecté.
+- **Bouton « Ajouter au panier » sur la vitrine** : si l'utilisateur n'est pas connecté, un message l'invite à se connecter et il est redirigé vers `/login.html`.
+- **Numéro de téléphone obligatoire à l'inscription** (`/api/auth/register`).
+- **Reconnaissance admin par numéro de téléphone** :
+  - Table `admin_phones` (PK `phone` normalisé en chiffres uniquement, `is_super` 0/1).
+  - Numéros initiaux : `065487909` (super), `050271841`, `064280982`, `066342094`, `066059986`, `069680847` (admins normaux).
+  - À la connexion, si le téléphone du compte figure dans `admin_phones`, l'utilisateur est automatiquement reconnu comme admin (pas besoin du mot de passe `TAF1-FLEMME`/`MMDE2007`).
+  - `/api/admin/status` renvoie `{authenticated, role, is_super, via_phone}`.
+- **Lien « Espace administrateur » dans `parametres.html`** : visible uniquement si `/api/admin/status` indique que le compte est admin ; pointe vers `/admin.html` ou `/super-admin.html` selon `is_super`.
+- **Gestion des numéros admin** :
+  - `GET /api/admin/phones` (admin) — liste.
+  - `POST /api/admin/phones` (admin et super-admin) — ajoute un numéro ; seul un super-admin peut le marquer `is_super`.
+  - `DELETE /api/admin/phones/<phone>` (super-admin uniquement) — retire un numéro.
 
 ## Stack Technique
 - **Backend** : Node.js 20 / Express 4
