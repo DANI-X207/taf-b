@@ -194,13 +194,16 @@ def clean_phone(value):
 
 
 def normalize_phone(value):
-    """Normalise un numéro de téléphone en ne gardant que les chiffres pour comparaison."""
+    """Normalise un numéro de téléphone congolais au format local à 9 chiffres (ex: 065487909)."""
     if not value:
         return ""
     digits = re.sub(r"\D+", "", str(value))
-    # Supprime un éventuel indicatif international "242" du Congo s'il précède un numéro local
+    # Supprime un éventuel indicatif international "242" du Congo s'il précède le numéro local
     if len(digits) > 9 and digits.startswith("242"):
         digits = digits[3:]
+    # Préfixe avec "0" si l'utilisateur a omis le zéro initial du format local 9 chiffres
+    if len(digits) == 8:
+        digits = "0" + digits
     return digits
 
 
@@ -1197,6 +1200,34 @@ def get_reviews(book_id):
     reviews = [dict(row) for row in conn.execute("SELECT * FROM reviews WHERE book_id = ? ORDER BY id DESC", (book_id,)).fetchall()]
     conn.close()
     return jsonify(reviews)
+
+
+@app.route("/api/books/<int:book_id>/reviews", methods=["POST"])
+@require_user_api
+def post_book_review(book_id):
+    """Ajoute un avis sur un livre. L'auteur est le compte connecté."""
+    data = request.get_json(silent=True) or {}
+    rating = max(1, min(clean_int(data.get("rating"), 1, 5), 5))
+    user = current_user() or {}
+    try:
+        comment = clean_text(data.get("comment"), 800, True)
+    except ValueError:
+        return jsonify({"error": "Le commentaire est obligatoire."}), 400
+    if len(comment) < 3:
+        return jsonify({"error": "Votre commentaire est trop court."}), 400
+    customer_name = (data.get("author") or user.get("name") or "Client").strip()[:120]
+    conn = get_db()
+    if not conn.execute("SELECT id FROM books WHERE id = ?", (book_id,)).fetchone():
+        conn.close()
+        return jsonify({"error": "Livre non trouvé"}), 404
+    conn.execute(
+        "INSERT INTO reviews (book_id, user_id, customer_name, rating, comment, created_at) VALUES (?,?,?,?,?,?)",
+        (book_id, user.get("id"), customer_name, rating, comment, now_iso()),
+    )
+    conn.commit()
+    review = dict(conn.execute("SELECT * FROM reviews WHERE id = last_insert_rowid()").fetchone())
+    conn.close()
+    return jsonify(review), 201
 
 
 @app.route("/api/ads", methods=["GET"])

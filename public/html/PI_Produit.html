@@ -182,7 +182,7 @@ function renderReviews(reviews){
   } else {
     list.innerHTML = reviews.map(function(r){
       return '<div class="review-card">' +
-        '<div class="review-head"><span class="author">' + esc(r.author||"Anonyme") + '</span>' +
+        '<div class="review-head"><span class="author">' + esc(r.customer_name||r.author||"Anonyme") + '</span>' +
           '<span class="review-stars">' + stars(r.rating) + '</span>' +
         '</div>' +
         '<div class="review-text">' + esc(r.comment||"") + '</div>' +

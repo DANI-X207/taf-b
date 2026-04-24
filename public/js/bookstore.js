@@ -371,6 +371,7 @@
   }
 
   function initDetail() {
+    if (window.MAGMA_DETAIL_CUSTOM) return;
     var params = new URLSearchParams(window.location.search);
     var id = params.get("id");
     if (!id) return;
