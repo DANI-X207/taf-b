@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mayombe — Accueil</title>
+<!-- skip-inject: magma-fixes.css -->
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{background:#f2f1f1 !important;min-height:100vh}
+  body{font-family:Verdana,Arial,Helvetica,sans-serif;color:#2d2d2d;line-height:1.5}
+  a{text-decoration:none;color:inherit}
+  img{display:block;max-width:100%}
+
+  /* ===== HEADER ===== */
+  .topbar{background:#2b293a;color:#fff;height:56px;display:flex;align-items:center;padding:0 24px;gap:24px;position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0}
+  .logo-mark{width:28px;height:28px;background:#ff690c;border-radius:6px;display:grid;place-items:center;font-size:14px}
+  .search{flex:1;max-width:520px;height:34px;background:#fff;border-radius:4px;display:flex;align-items:center;padding:0 12px;gap:8px}
+  .search input{flex:1;border:0;outline:0;font-size:13px;color:#2d2d2d;background:transparent}
+  .search button{background:#ff690c;color:#fff;border:0;height:26px;padding:0 12px;border-radius:3px;font-weight:600;cursor:pointer;font-size:12px}
+  .topbar-nav{display:flex;align-items:center;gap:22px;font-size:13px}
+  .topbar-nav a{opacity:.85}.topbar-nav a:hover{opacity:1}
+  .icons{display:flex;align-items:center;gap:18px;margin-left:auto}
+  .icon-btn{width:24px;height:24px;color:#fff;cursor:pointer;display:grid;place-items:center;position:relative}
+  .icon-btn svg{width:22px;height:22px;stroke:#fff;fill:none;stroke-width:1.8}
+
+  /* ===== HERO ===== */
+  .hero{background:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.55)),url('/img/pexels-mikhail-nilov-6970019.png') center/cover no-repeat;height:340px;position:relative;display:flex;align-items:center;padding:0 64px}
+  .hero-card{background:#fff;border-radius:6px;padding:22px 26px;max-width:340px;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+  .hero-card h2{font-size:18px;color:#2b293a;margin-bottom:10px;line-height:1.3}
+  .hero-card p{font-size:12.5px;color:#666;margin-bottom:14px}
+  .btn-orange{display:inline-block;background:#ff690c;color:#fff;border:0;padding:10px 22px;border-radius:3px;font-weight:600;font-size:13px;cursor:pointer;letter-spacing:.3px}
+  .btn-orange:hover{background:#e85a00}
+
+  /* ===== SECTIONS WRAPPER ===== */
+  .wrap{max-width:1200px;margin:0 auto;padding:0 32px}
+  section{padding:38px 0}
+  h2.sec-title{font-size:20px;color:#2b293a;margin-bottom:18px;font-weight:700}
+  h3.sec-title{font-size:18px;color:#2b293a;margin-bottom:6px;font-weight:700;text-align:center}
+  .sec-sub{text-align:center;font-size:13px;color:#888;margin-bottom:24px}
+
+  /* ===== CATEGORIES ===== */
+  .cats{display:flex;flex-wrap:wrap;gap:10px}
+  .cat-chip{background:#fff;border:1px solid #e2e2e2;color:#444;padding:8px 18px;border-radius:20px;font-size:12.5px;cursor:pointer;transition:all .15s}
+  .cat-chip:hover,.cat-chip.active{background:#ff690c;color:#fff;border-color:#ff690c}
+
+  /* ===== PRODUCT GRID ===== */
+  .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+  .pcard{background:#fff;border-radius:6px;overflow:hidden;cursor:pointer;transition:transform .2s,box-shadow .2s;position:relative;display:flex;flex-direction:column}
+  .pcard:hover{transform:translateY(-3px);box-shadow:0 8px 18px rgba(0,0,0,.08)}
+  .pcard .thumb{width:100%;aspect-ratio:1/1;background:#f0eee9;display:grid;place-items:center;overflow:hidden}
+  .pcard .thumb img{width:100%;height:100%;object-fit:cover}
+  .pcard .body{padding:10px 12px 14px;flex:1;display:flex;flex-direction:column}
+  .pcard .pname{font-size:12.5px;color:#2d2d2d;font-weight:600;margin-bottom:4px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:32px}
+  .pcard .pauthor{font-size:11px;color:#888;margin-bottom:8px}
+  .pcard .pprice{font-size:13px;color:#ff690c;font-weight:700;margin-top:auto}
+  .pcard .ribbon{position:absolute;top:8px;right:8px;background:rgba(255,105,12,.95);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:.3px}
+
+  /* ===== ORANGE CTA BANNER ===== */
+  .cta-banner{background:#ff690c;color:#fff;border-radius:6px;padding:28px 36px;display:flex;flex-direction:column;align-items:flex-start;gap:14px;margin-top:8px}
+  .cta-banner h3{font-size:18px;font-weight:700}
+  .cta-banner p{font-size:13px;opacity:.92;max-width:560px}
+  .cta-banner .btn-white{background:#fff;color:#ff690c;border:0;padding:9px 22px;border-radius:3px;font-weight:700;cursor:pointer;font-size:13px}
+
+  /* ===== TWO INFO CARDS ===== */
+  .two-cols{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .info-card{background:#fff;border-radius:6px;padding:22px}
+  .info-card h4{font-size:14.5px;color:#2b293a;margin-bottom:14px;font-weight:700}
+  .info-thumbs{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .info-thumb{aspect-ratio:1/1;background:#f0eee9;border-radius:4px;overflow:hidden;display:grid;place-items:center}
+  .info-thumb img{width:100%;height:100%;object-fit:cover}
+  .info-thumb .lbl{font-size:11px;color:#888;text-align:center;padding-top:6px}
+
+  /* ===== HORIZONTAL STRIP ===== */
+  .strip{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px}
+  .strip-item{aspect-ratio:1/1;border-radius:6px;overflow:hidden;background:#ddd}
+  .strip-item img{width:100%;height:100%;object-fit:cover}
+
+  /* ===== DARK PURPLE SECTION ===== */
+  .dark-section{background:#2b293a;color:#fff;padding:38px 0;margin-top:8px;border-radius:6px}
+  .dark-section .sec-title{color:#fff}
+  .dark-section .sec-sub{color:#bbb}
+  .dark-section .pcard{background:#3a3849}
+  .dark-section .pcard .pname{color:#fff}
+  .dark-section .pcard .pauthor{color:#aaa}
+  .dark-section .pcard .thumb{background:#4a4859}
+
+  /* ===== FASHION SECTION ===== */
+  .fashion{background:#1f1d2c;color:#fff;border-radius:6px;padding:36px;display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:center}
+  .fashion h3{font-size:20px;font-weight:700;margin-bottom:8px}
+  .fashion p{font-size:13px;color:#bbb;margin-bottom:18px;line-height:1.6}
+  .fashion-imgs{display:grid;grid-template-columns:1fr 1fr;gap:8px;height:240px}
+  .fashion-imgs > div{background-size:cover;background-position:center;border-radius:4px}
+  .fashion-dots{display:flex;gap:6px;margin-top:14px;justify-content:flex-end}
+  .fashion-dots span{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.3)}
+  .fashion-dots span.active{background:#ff690c}
+
+  /* ===== BOTTOM TWO INFO ===== */
+  .bottom-info{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .bottom-card{background:#f7f3ec;border-radius:6px;padding:22px;display:flex;align-items:center;gap:18px}
+  .bottom-card .ico{width:60px;height:60px;background:#ff690c;color:#fff;border-radius:6px;display:grid;place-items:center;font-size:24px;flex-shrink:0}
+  .bottom-card h5{font-size:14px;color:#2b293a;margin-bottom:4px;font-weight:700}
+  .bottom-card p{font-size:12px;color:#777}
+
+  /* ===== FOOTER ===== */
+  footer{background:#1f1d2c;color:#aaa;padding:48px 0 24px;margin-top:30px}
+  .foot-grid{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px}
+  .foot-brand h4{color:#fff;font-size:18px;margin-bottom:8px}
+  .foot-brand p{font-size:12px;color:#888;line-height:1.6}
+  .foot-col h5{color:#fff;font-size:13px;margin-bottom:14px;font-weight:700;text-transform:uppercase;letter-spacing:.5px}
+  .foot-col a{display:block;color:#aaa;font-size:12.5px;padding:4px 0}
+  .foot-col a:hover{color:#ff690c}
+  .newsletter{display:flex;gap:6px;margin-top:8px}
+  .newsletter input{flex:1;padding:8px 10px;border:0;border-radius:3px;background:#2c2a3b;color:#fff;font-size:12px}
+  .newsletter button{background:#ff690c;color:#fff;border:0;padding:0 14px;border-radius:3px;cursor:pointer;font-size:12px;font-weight:600}
+  .copyright{text-align:right;font-size:11px;color:#666;margin-top:32px;padding-top:20px;border-top:1px solid #2c2a3b}
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width:980px){
+    .grid{grid-template-columns:repeat(3,1fr)}
+    .two-cols,.bottom-info,.fashion{grid-template-columns:1fr}
+    .foot-grid{grid-template-columns:1fr 1fr}
+    .topbar-nav{display:none}
+  }
+  @media (max-width:640px){
+    .grid{grid-template-columns:repeat(2,1fr)}
+    .strip{grid-template-columns:repeat(3,1fr)}
+    .hero{padding:0 20px;height:280px}
+    .wrap{padding:0 16px}
+    .foot-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="topbar">
+  <a href="/Accueil-v2.html" class="logo"><span class="logo-mark">M</span><span>Mayombe square</span></a>
+  <form class="search" onsubmit="event.preventDefault();window.location='/MABOUTIQUE.html?q='+encodeURIComponent(this.q.value)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" name="q" placeholder="Rechercher un article…">
+    <button type="submit">Recherche</button>
+  </form>
+  <nav class="topbar-nav">
+    <a href="/Accueil-v2.html">Accueil</a>
+    <a href="/MABOUTIQUE.html">Mon Magma</a>
+    <a href="/Mon-panier.html">Mon panier</a>
+    <a href="#">à propos</a>
+  </nav>
+  <div class="icons">
+    <a class="icon-btn" href="/mon-compte.html" title="Mon compte"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg></a>
+    <a class="icon-btn" href="/Mon-panier.html" title="Panier"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></a>
+    <a class="icon-btn" href="#" title="Aide"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><circle cx="12" cy="17" r=".5" fill="#fff"/></svg></a>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-card">
+    <h2>Découvrez nos nouveautés littéraires</h2>
+    <p>Plongez dans une sélection de livres soigneusement choisis pour vous évader.</p>
+    <a class="btn-orange" href="/MABOUTIQUE.html">Découvrir</a>
+  </div>
+</div>
+
+<!-- CATEGORIES -->
+<section class="wrap">
+  <h2 class="sec-title">Catégories</h2>
+  <div class="cats" id="cats"></div>
+</section>
+
+<!-- PRODUCT GRID -->
+<section class="wrap">
+  <h3 class="sec-title">Nos experts ont sélectionné pour vous</h3>
+  <p class="sec-sub">les tendances à suivre</p>
+  <div class="grid" id="grid-trends"></div>
+</section>
+
+<!-- ORANGE CTA -->
+<section class="wrap">
+  <div class="cta-banner">
+    <h3>Les bonnes affaires n'attendent pas</h3>
+    <p>Profitez de nos ventes spéciales pour découvrir des articles hors du commun à des prix imbattables. Attention, stocks très limités.</p>
+    <a class="btn-white" href="/MABOUTIQUE.html">Voir les offres</a>
+  </div>
+</section>
+
+<!-- TWO INFO CARDS -->
+<section class="wrap">
+  <div class="two-cols">
+    <div class="info-card">
+      <h4>Prenez soin de vous, restez actif et en pleine forme</h4>
+      <div class="info-thumbs" id="info-cards-1"></div>
+    </div>
+    <div class="info-card">
+      <h4>Des produits de sport et de technologie</h4>
+      <div class="info-thumbs" id="info-cards-2"></div>
+    </div>
+  </div>
+</section>
+
+<!-- HORIZONTAL STRIP -->
+<section class="wrap">
+  <h3 class="sec-title">Nos ventes particulières regroupent des articles sélectionnés</h3>
+  <p class="sec-sub">pour leur authenticité, leur qualité et leur originalité</p>
+  <div class="strip" id="strip"></div>
+</section>
+
+<!-- DARK PURPLE SECTION -->
+<section class="wrap">
+  <div class="dark-section">
+    <div style="padding:0 24px">
+      <h3 class="sec-title">Nos experts ont sélectionné pour vous</h3>
+      <p class="sec-sub">les tendances à suivre</p>
+      <div class="grid" id="grid-dark"></div>
+    </div>
+  </div>
+</section>
+
+<!-- FASHION -->
+<section class="wrap">
+  <div class="fashion">
+    <div>
+      <h3>Soyez à la mode, à votre façon.</h3>
+      <p>Élégant, original et moderne — à la portée de tous notre nouvelle collection s'adapte à toutes les envies et à tous les styles.</p>
+      <a class="btn-orange" href="/MABOUTIQUE.html">Découvrir</a>
+    </div>
+    <div>
+      <div class="fashion-imgs">
+        <div style="background-image:url('/img/pexels-mnzoutfits-1598507.png')"></div>
+        <div style="background-image:url('/img/pexels-mnzoutfits-1598508.png')"></div>
+      </div>
+      <div class="fashion-dots"><span></span><span class="active"></span><span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- BOTTOM INFO -->
+<section class="wrap">
+  <div class="bottom-info">
+    <div class="bottom-card">
+      <div class="ico">🔍</div>
+      <div>
+        <h5>À la recherche de nouveautés ?</h5>
+        <p>Découvrez chaque semaine de nouveaux livres ajoutés au catalogue.</p>
+      </div>
+    </div>
+    <div class="bottom-card">
+      <div class="ico">🎁</div>
+      <div>
+        <h5>Ne manquez plus aucune offre !</h5>
+        <p>Inscrivez-vous à notre newsletter pour recevoir nos meilleures promotions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="wrap">
+    <div class="foot-grid">
+      <div class="foot-brand">
+        <h4>Mayombe</h4>
+        <p>Votre librairie en ligne de confiance — découvrez, achetez et faites-vous livrer vos livres préférés.</p>
+        <div class="newsletter">
+          <input type="email" placeholder="Votre email">
+          <button>OK</button>
+        </div>
+      </div>
+      <div class="foot-col">
+        <h5>La boutique</h5>
+        <a href="/MABOUTIQUE.html">Catalogue</a>
+        <a href="/Mon-panier.html">Mon panier</a>
+        <a href="/mes-commandes.html">Mes commandes</a>
+      </div>
+      <div class="foot-col">
+        <h5>Navigation</h5>
+        <a href="/Accueil-v2.html">Accueil</a>
+        <a href="/mon-compte.html">Mon compte</a>
+        <a href="/login.html">Connexion</a>
+      </div>
+      <div class="foot-col">
+        <h5>Contact</h5>
+        <a href="mailto:moussokiexauce7@gmail.com">moussokiexauce7@gmail.com</a>
+        <a href="#">Conditions générales</a>
+        <a href="#">Politique de confidentialité</a>
+      </div>
+    </div>
+    <div class="copyright">© 2026 Librairie Magma — Tous droits réservés</div>
+  </div>
+</footer>
+
+<script>
+const FALLBACK_IMG = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23eee'/><text x='50' y='55' text-anchor='middle' font-family='Arial' font-size='10' fill='%23888'>Pas d image</text></svg>";
+const STRIP_IMGS = [
+  "/img/pakata-goh-RDolnHtjVCY-unsplash.png",
+  "/img/aram-sabah-smVUoz8CSCw-unsplash.png",
+  "/img/pexels-cottonbro-5722886.png",
+  "/img/pexels-luci-23254259-6791447.png",
+  "/img/pexels-karola-g-4397833.png"
+];
+
+function esc(s){return String(s||"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]))}
+function money(n){return new Intl.NumberFormat("fr-FR").format(n||0)+" FCFA"}
+
+function bookCard(b,withRibbon){
+  return `<a class="pcard" href="/PI_Produit.html?id=${b.id}">
+    ${withRibbon&&b.featured?'<span class="ribbon">TOP</span>':''}
+    <div class="thumb"><img src="${esc(b.image||FALLBACK_IMG)}" alt="${esc(b.titre)}" onerror="this.src='${FALLBACK_IMG}'"></div>
+    <div class="body">
+      <div class="pname">${esc(b.titre)}</div>
+      <div class="pauthor">${esc(b.auteur)}</div>
+      <div class="pprice">${money(b.prix)}</div>
+    </div>
+  </a>`;
+}
+
+fetch("/api/books").then(r=>r.json()).then(books=>{
+  const list=Array.isArray(books)?books:(books.books||[]);
+  // Categories
+  const cats=["Tous",...new Set(list.map(b=>b.genre).filter(Boolean))];
+  document.getElementById("cats").innerHTML=cats.map((c,i)=>
+    `<span class="cat-chip ${i===0?'active':''}" onclick="window.location='/MABOUTIQUE.html${i===0?'':'?genre='+encodeURIComponent(c)}'">${esc(c)}</span>`
+  ).join("");
+
+  // Trends grid (8 first)
+  const trends=list.slice(0,8);
+  document.getElementById("grid-trends").innerHTML=trends.map(b=>bookCard(b,true)).join("");
+
+  // Two info cards (4 thumbs each)
+  const half1=list.slice(0,4),half2=list.slice(4,8);
+  document.getElementById("info-cards-1").innerHTML=half1.map(b=>
+    `<a class="info-thumb" href="/PI_Produit.html?id=${b.id}"><img src="${esc(b.image||FALLBACK_IMG)}" alt="" onerror="this.src='${FALLBACK_IMG}'"></a>`
+  ).join("");
+  document.getElementById("info-cards-2").innerHTML=half2.map(b=>
+    `<a class="info-thumb" href="/PI_Produit.html?id=${b.id}"><img src="${esc(b.image||FALLBACK_IMG)}" alt="" onerror="this.src='${FALLBACK_IMG}'"></a>`
+  ).join("");
+
+  // Strip (5 images from public/img)
+  document.getElementById("strip").innerHTML=STRIP_IMGS.map(src=>
+    `<a class="strip-item" href="/MABOUTIQUE.html"><img src="${src}" alt="" onerror="this.style.display='none'"></a>`
+  ).join("");
+
+  // Dark section grid (last 4)
+  const dark=list.slice(-4);
+  document.getElementById("grid-dark").innerHTML=dark.map(b=>bookCard(b,false)).join("");
+}).catch(()=>{
+  document.getElementById("grid-trends").innerHTML='<p style="grid-column:1/-1;text-align:center;color:#888;padding:30px">Impossible de charger les livres.</p>';
+});
+</script>
+</body>
+</html>
