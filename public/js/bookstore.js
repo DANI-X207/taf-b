@@ -80,12 +80,21 @@
 
   function addAdminLink() {
     if (document.getElementById("magma-admin-link")) return;
-    var link = document.createElement("a");
-    link.id = "magma-admin-link";
-    link.href = "/Admin.html";
-    link.textContent = "Admin";
-    link.style.cssText = "position:fixed;right:18px;top:18px;z-index:99999;background:#2b293a;color:#fff;text-decoration:none;padding:9px 14px;border-radius:999px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.2);";
-    document.body.appendChild(link);
+    // Vérifie que l'utilisateur est réellement admin (mot de passe ou téléphone) avant d'afficher l'icône.
+    fetch("/api/admin/status", { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s || !s.authenticated) return;
+        if (document.getElementById("magma-admin-link")) return;
+        var link = document.createElement("a");
+        link.id = "magma-admin-link";
+        link.href = s.is_super ? "/super-admin.html" : "/admin.html";
+        link.textContent = s.is_super ? "🛡️ Super Admin" : "🛠️ Admin";
+        link.title = "Ouvrir le tableau de bord administrateur";
+        link.style.cssText = "position:fixed;right:18px;top:18px;z-index:99999;background:#2b293a;color:#fff;text-decoration:none;padding:9px 14px;border-radius:999px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.2);";
+        document.body.appendChild(link);
+      })
+      .catch(function () {});
   }
 
   function updateCartBadge() {
@@ -606,7 +615,7 @@
           errHtml +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Nom complet</label><input id="reg-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Adresse email</label><input id="reg-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
-          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format 06-548-7909)</span></label><input id="reg-phone" type="tel" autocomplete="tel" placeholder="06-548-7909" maxlength="11" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format 06-548-7909)</span></label><input id="reg-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="06-548-7909" maxlength="12" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:24px;"><label style="' + labelStyle + '">Mot de passe <span style="color:#aaa;font-size:11px;">(min. 8 caractères, lettre + chiffre)</span></label><input id="reg-password" type="password" autocomplete="new-password" style="' + fieldStyle + '"></div>' +
           '<button id="reg-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:3px;cursor:pointer;letter-spacing:.3px;">Créer mon compte</button>' +
           '<p style="margin-top:16px;font-size:12px;color:#aaa;text-align:center;">En créant un compte, vous acceptez nos conditions d\'utilisation.</p>' +
@@ -615,12 +624,37 @@
 
     document.body.appendChild(shell);
 
+    // ===== Auto-formatage du numéro de téléphone : 06-548-7909 (XX-XXX-XXXX) =====
+    function formatPhoneInput(rawDigits) {
+      var d = String(rawDigits || "").replace(/\D+/g, "").slice(0, 9);
+      if (d.length <= 2) return d;
+      if (d.length <= 5) return d.slice(0, 2) + "-" + d.slice(2);
+      return d.slice(0, 2) + "-" + d.slice(2, 5) + "-" + d.slice(5, 9);
+    }
+    var regPhoneInput = document.getElementById("reg-phone");
+    if (regPhoneInput) {
+      regPhoneInput.addEventListener("input", function () {
+        var caretAtEnd = this.selectionStart === this.value.length;
+        var formatted = formatPhoneInput(this.value);
+        this.value = formatted;
+        if (caretAtEnd) {
+          // Place le curseur à la fin pour que la frappe continue naturellement
+          try { this.setSelectionRange(formatted.length, formatted.length); } catch (e) {}
+        }
+      });
+      regPhoneInput.addEventListener("blur", function () {
+        this.value = formatPhoneInput(this.value);
+      });
+    }
+
     document.getElementById("reg-submit").addEventListener("click", function () {
       var name = document.getElementById("reg-name").value.trim();
       var email = document.getElementById("reg-email").value.trim();
-      var phone = document.getElementById("reg-phone").value.trim();
+      var phone = formatPhoneInput(document.getElementById("reg-phone").value);
+      document.getElementById("reg-phone").value = phone;
       var pass = document.getElementById("reg-password").value;
       if (!name || !email || !phone || !pass) { toast("Veuillez remplir tous les champs.", "error"); return; }
+      if (phone.replace(/\D+/g, "").length !== 9) { toast("Le numéro doit comporter 9 chiffres (ex: 06-548-7909).", "error"); return; }
       fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email, phone: phone, password: pass }) })
         .then(function (r) {
           return r.json().then(function (d) {
