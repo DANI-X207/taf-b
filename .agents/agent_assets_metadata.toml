@@ -30,3 +30,15 @@ id = "lSm5c5Q-55JiNVjLA1xj3"
 uri = "file://public/img/strip-books-5.png"
 type = "image"
 title = "person reading library"
+
+[[generated]]
+id = "dSEElAURbDrSp4zxYJKU8"
+uri = "file://public/img/fashion-books-1.png"
+type = "image"
+title = "art books collection"
+
+[[generated]]
+id = "yptWmU_rXb-FqnvYmDXvC"
+uri = "file://public/img/fashion-books-2.png"
+type = "image"
+title = "reader with book and coffee"

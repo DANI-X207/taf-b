@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Mayombe — Accueil</title>
+<title>Librairie Magma — Bienvenue</title>
 <!-- skip-inject: magma-fixes.css -->
 <script>window.MAGMA_HOMEPAGE_CUSTOM=true;</script>
 <style>
@@ -31,6 +31,11 @@
   .icon-btn .lbl{font-size:12px;opacity:.9}
   .icon-btn:hover{opacity:.85}
   .cart-badge{position:absolute;top:-6px;left:12px;background:#ff690c;color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 4px}
+  .auth-btn{padding:8px 16px;border-radius:4px;font-size:13px;font-weight:600;cursor:pointer;text-decoration:none;white-space:nowrap;transition:all .15s}
+  .auth-login{color:#fff;border:1px solid rgba(255,255,255,.4);background:transparent}
+  .auth-login:hover{background:rgba(255,255,255,.1)}
+  .auth-register{background:#ff690c;color:#fff}
+  .auth-register:hover{background:#e85a00}
 
   /* ===== HERO ===== */
   .hero{background:linear-gradient(rgba(0,0,0,.35),rgba(0,0,0,.55)),url('/img/pexels-mikhail-nilov-6970019.png') center/cover no-repeat;height:340px;position:relative;display:flex;align-items:center;padding:0 64px}
@@ -155,28 +160,18 @@
     <a href="/a-propos.html">à propos</a>
   </nav>
   <div class="icons">
-    <a class="icon-btn" href="/mon-compte.html" title="Mon compte">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
-      <span class="lbl">Compte</span>
-    </a>
-    <a class="icon-btn" href="/Mon-panier.html" title="Panier">
-      <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
-      <span class="cart-badge" id="cart-count">0</span>
-      <span class="lbl">Panier</span>
-    </a>
-    <a class="icon-btn" href="/parametres.html" title="Paramètres">
-      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-      <span class="lbl">Paramètres</span>
-    </a>
+    <a class="auth-btn auth-login" href="/login.html">Connexion</a>
+    <a class="auth-btn auth-register" href="/register.html">Créer un compte</a>
   </div>
 </header>
 
 <!-- HERO -->
 <div class="hero">
   <div class="hero-card">
-    <h2>Découvrez nos nouveautés littéraires</h2>
-    <p>Plongez dans une sélection de livres soigneusement choisis pour vous évader.</p>
-    <a class="btn-orange" href="/MABOUTIQUE.html">Découvrir</a>
+    <h2>Bienvenue à la Librairie Magma</h2>
+    <p>Créez votre compte gratuitement pour commander vos livres et profiter de la livraison à domicile.</p>
+    <a class="btn-orange" href="/register.html">Créer un compte</a>
+    <a href="/login.html" style="display:inline-block;margin-left:8px;padding:10px 18px;font-size:13px;color:#2b293a;font-weight:600;text-decoration:underline">Se connecter</a>
   </div>
 </div>
 
