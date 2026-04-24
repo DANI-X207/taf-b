@@ -207,6 +207,14 @@ def normalize_phone(value):
     return digits
 
 
+def format_phone(value):
+    """Formate un numéro local en XX-XXX-XXXX (ex: 06-548-7909). Renvoie la valeur brute si format inattendu."""
+    digits = normalize_phone(value)
+    if len(digits) == 9:
+        return f"{digits[0:2]}-{digits[2:5]}-{digits[5:9]}"
+    return digits or (str(value) if value else "")
+
+
 def clean_url(value, max_len=700):
     """Valide les URLs utilisées pour les images et les publicités."""
     url = clean_text(value, max_len)
@@ -345,8 +353,17 @@ def init_db():
         for raw_phone, is_super in SEED_ADMIN_PHONES:
             conn.execute(
                 "INSERT INTO admin_phones (phone, is_super, created_at, added_by) VALUES (?,?,?,?)",
-                (normalize_phone(raw_phone), is_super, now_iso(), "system"),
+                (format_phone(raw_phone), is_super, now_iso(), "system"),
             )
+    else:
+        # Migration : reformate toute entrée existante au format XX-XXX-XXXX si nécessaire
+        for row in conn.execute("SELECT id, phone FROM admin_phones").fetchall():
+            formatted = format_phone(row["phone"])
+            if formatted and formatted != row["phone"]:
+                try:
+                    conn.execute("UPDATE admin_phones SET phone = ? WHERE id = ?", (formatted, row["id"]))
+                except sqlite3.IntegrityError:
+                    conn.execute("DELETE FROM admin_phones WHERE id = ?", (row["id"],))
 
     if conn.execute("SELECT COUNT(*) FROM books").fetchone()[0] == 0:
         books = [
@@ -532,14 +549,17 @@ def serve_html(filename):
 
 
 def get_admin_phone_entry(phone):
-    """Retourne l'entrée admin_phones correspondant à un numéro normalisé, sinon None."""
+    """Retourne l'entrée admin_phones correspondant à un numéro, comparaison sur les chiffres uniquement."""
     norm = normalize_phone(phone)
     if not norm:
         return None
     conn = get_db()
-    row = conn.execute("SELECT * FROM admin_phones WHERE phone = ?", (norm,)).fetchone()
+    rows = conn.execute("SELECT * FROM admin_phones").fetchall()
     conn.close()
-    return dict(row) if row else None
+    for row in rows:
+        if normalize_phone(row["phone"]) == norm:
+            return dict(row)
+    return None
 
 
 def current_user_admin_entry():
@@ -722,7 +742,11 @@ def auth_register():
         phone_raw = data.get("phone") or data.get("telephone") or ""
         if not str(phone_raw).strip():
             raise ValueError("Le numéro de téléphone est obligatoire pour créer un compte.")
-        phone = clean_phone(phone_raw)
+        clean_phone(phone_raw)  # validation du caractère légal des entrées
+        phone_digits = normalize_phone(phone_raw)
+        if len(phone_digits) != 9:
+            raise ValueError("Le numéro doit comporter 9 chiffres au format 06-548-7909.")
+        phone = format_phone(phone_digits)
     except ValueError as exc:
         if request.is_json:
             return jsonify({"error": str(exc)}), 400
@@ -787,11 +811,11 @@ def auth_login():
 
 @app.route("/auth/logout", methods=["POST", "GET"])
 def auth_logout():
-    """Ferme la session client ou administrateur."""
+    """Ferme la session client ou administrateur. Redirige vers la vitrine après déconnexion."""
     session.clear()
     if request.is_json:
-        return jsonify({"success": True})
-    return redirect(url_for("html_page", filename="login"))
+        return jsonify({"success": True, "redirect": "/"})
+    return redirect(url_for("index"))
 
 
 @app.route("/api/auth/status", methods=["GET"])
@@ -1277,36 +1301,39 @@ def admin_add_phone():
     """Ajoute un numéro à la liste des admins. Admin et super-admin peuvent ajouter."""
     data = request.get_json(silent=True) or {}
     phone_norm = normalize_phone(data.get("phone"))
-    if len(phone_norm) < 6:
-        return jsonify({"error": "Numéro de téléphone invalide."}), 400
+    if len(phone_norm) != 9:
+        return jsonify({"error": "Le numéro doit comporter 9 chiffres au format 06-548-7909."}), 400
+    if get_admin_phone_entry(phone_norm):
+        return jsonify({"error": "Ce numéro est déjà admin."}), 409
     is_super = 1 if (data.get("is_super") and admin_role() == "super") else 0
+    phone_formatted = format_phone(phone_norm)
     conn = get_db()
     try:
         conn.execute(
             "INSERT INTO admin_phones (phone, is_super, created_at, added_by) VALUES (?,?,?,?)",
-            (phone_norm, is_super, now_iso(), (current_user() or {}).get("name") or "admin"),
+            (phone_formatted, is_super, now_iso(), (current_user() or {}).get("name") or "admin"),
         )
         conn.commit()
     except sqlite3.IntegrityError:
         conn.close()
         return jsonify({"error": "Ce numéro est déjà admin."}), 409
     conn.close()
-    return jsonify({"success": True, "phone": phone_norm, "is_super": bool(is_super)}), 201
+    return jsonify({"success": True, "phone": phone_formatted, "is_super": bool(is_super)}), 201
 
 
-@app.route("/api/admin/phones/<phone>", methods=["DELETE"])
+@app.route("/api/admin/phones/<path:phone>", methods=["DELETE"])
 @require_admin_api
 def admin_delete_phone(phone):
-    """Retire un numéro admin. Réservé au super-admin."""
+    """Retire un numéro admin (peu importe le format envoyé). Réservé au super-admin."""
     if admin_role() != "super":
         return jsonify({"error": "Seul un super-admin peut supprimer un numéro admin."}), 403
-    phone_norm = normalize_phone(phone)
+    entry = get_admin_phone_entry(phone)
+    if not entry:
+        return jsonify({"error": "Numéro introuvable."}), 404
     conn = get_db()
-    result = conn.execute("DELETE FROM admin_phones WHERE phone = ?", (phone_norm,))
+    conn.execute("DELETE FROM admin_phones WHERE id = ?", (entry["id"],))
     conn.commit()
     conn.close()
-    if result.rowcount == 0:
-        return jsonify({"error": "Numéro introuvable."}), 404
     return jsonify({"success": True})
 
 

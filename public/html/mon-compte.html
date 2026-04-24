@@ -57,7 +57,7 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
       fetch("/api/auth/logout",{method:"POST",credentials:"same-origin"})
         .then(function(){
           document.cookie="magma_sid=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-          window.location.href="/login.html";
+          window.location.href="/";
         })
         .catch(function(){btn.disabled=false;btn.textContent="Se déconnecter";});
     });}

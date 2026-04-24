@@ -606,7 +606,7 @@
           errHtml +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Nom complet</label><input id="reg-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Adresse email</label><input id="reg-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
-          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Numéro de téléphone</label><input id="reg-phone" type="tel" autocomplete="tel" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format 06-548-7909)</span></label><input id="reg-phone" type="tel" autocomplete="tel" placeholder="06-548-7909" maxlength="11" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:24px;"><label style="' + labelStyle + '">Mot de passe <span style="color:#aaa;font-size:11px;">(min. 8 caractères, lettre + chiffre)</span></label><input id="reg-password" type="password" autocomplete="new-password" style="' + fieldStyle + '"></div>' +
           '<button id="reg-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:3px;cursor:pointer;letter-spacing:.3px;">Créer mon compte</button>' +
           '<p style="margin-top:16px;font-size:12px;color:#aaa;text-align:center;">En créant un compte, vous acceptez nos conditions d\'utilisation.</p>' +
