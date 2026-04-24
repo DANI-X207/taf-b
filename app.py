@@ -62,10 +62,17 @@ ALLOWED_DELIVERY_ZONES = [
 PROTECTED_PAGES = {
     "index.html",
     "PAGEMOD-Accueil.html",
-    "PI_Produit.html",
     "Mon-panier.html",
     "Formulaire.html",
 }
+SEED_ADMIN_PHONES = [
+    ("065487909", 1),
+    ("050271841", 0),
+    ("064280982", 0),
+    ("066342094", 0),
+    ("066059986", 0),
+    ("069680847", 0),
+]
 AUTH_PAGES = {"login.html", "connexion.html", "register.html", "inscription.html"}
 INJECT_SCRIPT = '<script src="/js/bookstore.js"></script></body>'
 HEAD_COMPAT_SCRIPT = """
@@ -184,6 +191,17 @@ def clean_phone(value):
     if not re.fullmatch(r"[+0-9 ()\-.]{6,40}", phone):
         raise ValueError("Numéro de téléphone invalide")
     return phone
+
+
+def normalize_phone(value):
+    """Normalise un numéro de téléphone en ne gardant que les chiffres pour comparaison."""
+    if not value:
+        return ""
+    digits = re.sub(r"\D+", "", str(value))
+    # Supprime un éventuel indicatif international "242" du Congo s'il précède un numéro local
+    if len(digits) > 9 and digits.startswith("242"):
+        digits = digits[3:]
+    return digits
 
 
 def clean_url(value, max_len=700):
@@ -311,6 +329,21 @@ def init_db():
             created_at TEXT NOT NULL
         )
     """)
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS admin_phones (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone TEXT NOT NULL UNIQUE,
+            is_super INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL,
+            added_by TEXT DEFAULT ''
+        )
+    """)
+    if conn.execute("SELECT COUNT(*) FROM admin_phones").fetchone()[0] == 0:
+        for raw_phone, is_super in SEED_ADMIN_PHONES:
+            conn.execute(
+                "INSERT INTO admin_phones (phone, is_super, created_at, added_by) VALUES (?,?,?,?)",
+                (normalize_phone(raw_phone), is_super, now_iso(), "system"),
+            )
 
     if conn.execute("SELECT COUNT(*) FROM books").fetchone()[0] == 0:
         books = [
@@ -495,9 +528,40 @@ def serve_html(filename):
     return Response(content, mimetype="text/html")
 
 
+def get_admin_phone_entry(phone):
+    """Retourne l'entrée admin_phones correspondant à un numéro normalisé, sinon None."""
+    norm = normalize_phone(phone)
+    if not norm:
+        return None
+    conn = get_db()
+    row = conn.execute("SELECT * FROM admin_phones WHERE phone = ?", (norm,)).fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+
+def current_user_admin_entry():
+    """Retourne l'entrée admin_phones de l'utilisateur connecté si son numéro y figure."""
+    user = current_user()
+    if not user:
+        return None
+    return get_admin_phone_entry(user.get("phone"))
+
+
 def require_admin():
-    """Vérifie la session administrateur ouverte par le mot de passe dédié."""
-    return bool(session.get("admin_authenticated"))
+    """Vérifie la session administrateur (mot de passe ou numéro de téléphone admin)."""
+    if session.get("admin_authenticated"):
+        return True
+    return current_user_admin_entry() is not None
+
+
+def admin_role():
+    """Retourne le rôle admin courant : 'super', 'normal' ou None."""
+    if session.get("admin_authenticated"):
+        return session.get("admin_role") or "normal"
+    entry = current_user_admin_entry()
+    if entry:
+        return "super" if entry.get("is_super") else "normal"
+    return None
 
 
 def admin_required_response():
@@ -632,8 +696,10 @@ def user_can_access_order(order):
 
 @app.route("/")
 def index():
-    """Page d'accueil principale (Accueil-v2.html)."""
-    return serve_html("Accueil-v2.html")
+    """Page d'accueil : vitrine pour les visiteurs, Accueil-v2 pour les comptes connectés."""
+    if is_authenticated():
+        return serve_html("Accueil-v2.html")
+    return serve_html("vitrine.html")
 
 
 @app.route("/favicon.ico")
@@ -651,7 +717,9 @@ def auth_register():
         email = clean_email(data.get("email"))
         password = clean_password(data.get("password"))
         phone_raw = data.get("phone") or data.get("telephone") or ""
-        phone = clean_phone(phone_raw) if str(phone_raw).strip() else ""
+        if not str(phone_raw).strip():
+            raise ValueError("Le numéro de téléphone est obligatoire pour créer un compte.")
+        phone = clean_phone(phone_raw)
     except ValueError as exc:
         if request.is_json:
             return jsonify({"error": str(exc)}), 400
@@ -789,7 +857,6 @@ def res_file(filename):
 
 
 @app.route("/api/books", methods=["GET"])
-@require_user_api
 def get_books():
     """Liste les livres du catalogue avec recherche et filtre par catégorie."""
     genre = clean_text(request.args.get("genre", ""), 80)
@@ -811,7 +878,6 @@ def get_books():
 
 
 @app.route("/api/books/featured", methods=["GET"])
-@require_user_api
 def get_featured():
     """Liste les livres mis en avant pour la page d'accueil."""
     conn = get_db()
@@ -821,7 +887,6 @@ def get_featured():
 
 
 @app.route("/api/books/<int:book_id>", methods=["GET"])
-@require_user_api
 def get_book(book_id):
     """Retourne le détail d'un livre."""
     conn = get_db()
@@ -959,7 +1024,6 @@ def clear_cart():
 
 
 @app.route("/api/genres", methods=["GET"])
-@require_user_api
 def get_genres():
     """Liste les catégories disponibles dans le catalogue."""
     conn = get_db()
@@ -1127,7 +1191,6 @@ def add_review():
 
 
 @app.route("/api/books/<int:book_id>/reviews", methods=["GET"])
-@require_user_api
 def get_reviews(book_id):
     """Liste les avis clients d'un livre."""
     conn = get_db()
@@ -1147,9 +1210,73 @@ def get_ads():
 
 @app.route("/api/admin/status", methods=["GET"])
 def admin_status():
-    """Retourne l'état de connexion administrateur."""
-    role = session.get("admin_role") or ("normal" if require_admin() else None)
-    return jsonify({"authenticated": require_admin(), "role": role})
+    """Retourne l'état de connexion administrateur (mot de passe ou téléphone)."""
+    is_admin = require_admin()
+    role = admin_role()
+    via_phone = False
+    if is_admin and not session.get("admin_authenticated"):
+        via_phone = True
+    return jsonify({
+        "authenticated": is_admin,
+        "role": role,
+        "is_super": role == "super",
+        "via_phone": via_phone,
+    })
+
+
+@app.route("/api/admin/phones", methods=["GET"])
+@require_admin_api
+def admin_list_phones():
+    """Liste les numéros de téléphone reconnus comme administrateurs."""
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM admin_phones ORDER BY is_super DESC, id ASC").fetchall()
+    conn.close()
+    return jsonify([{
+        "id": r["id"],
+        "phone": r["phone"],
+        "is_super": bool(r["is_super"]),
+        "created_at": r["created_at"],
+        "added_by": r["added_by"] or "",
+    } for r in rows])
+
+
+@app.route("/api/admin/phones", methods=["POST"])
+@require_admin_api
+def admin_add_phone():
+    """Ajoute un numéro à la liste des admins. Admin et super-admin peuvent ajouter."""
+    data = request.get_json(silent=True) or {}
+    phone_norm = normalize_phone(data.get("phone"))
+    if len(phone_norm) < 6:
+        return jsonify({"error": "Numéro de téléphone invalide."}), 400
+    is_super = 1 if (data.get("is_super") and admin_role() == "super") else 0
+    conn = get_db()
+    try:
+        conn.execute(
+            "INSERT INTO admin_phones (phone, is_super, created_at, added_by) VALUES (?,?,?,?)",
+            (phone_norm, is_super, now_iso(), (current_user() or {}).get("name") or "admin"),
+        )
+        conn.commit()
+    except sqlite3.IntegrityError:
+        conn.close()
+        return jsonify({"error": "Ce numéro est déjà admin."}), 409
+    conn.close()
+    return jsonify({"success": True, "phone": phone_norm, "is_super": bool(is_super)}), 201
+
+
+@app.route("/api/admin/phones/<phone>", methods=["DELETE"])
+@require_admin_api
+def admin_delete_phone(phone):
+    """Retire un numéro admin. Réservé au super-admin."""
+    if admin_role() != "super":
+        return jsonify({"error": "Seul un super-admin peut supprimer un numéro admin."}), 403
+    phone_norm = normalize_phone(phone)
+    conn = get_db()
+    result = conn.execute("DELETE FROM admin_phones WHERE phone = ?", (phone_norm,))
+    conn.commit()
+    conn.close()
+    if result.rowcount == 0:
+        return jsonify({"error": "Numéro introuvable."}), 404
+    return jsonify({"success": True})
 
 
 @app.route("/api/admin/login", methods=["POST"])
@@ -1184,7 +1311,7 @@ def serve_admin_dashboard(role):
     """Sert le tableau de bord admin/super-admin à partir de Admin.html."""
     if not require_admin():
         return redirect("/Admin.html")
-    current_role = session.get("admin_role") or "normal"
+    current_role = admin_role() or "normal"
     if current_role != role:
         return redirect("/super-admin.html" if current_role == "super" else "/admin.html")
     filepath = os.path.join(PUBLIC_HTML, "Admin.html")

@@ -84,6 +84,14 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
       </div>
     </div>
 
+    <div class="pa-section" id="pa-admin-section" style="display:none;">
+      <h2>Espace administrateur</h2>
+      <p>Votre numéro de téléphone est reconnu comme administrateur.</p>
+      <div class="pa-links">
+        <a id="pa-admin-link" href="/admin.html">🛠️ Ouvrir le tableau de bord administrateur</a>
+      </div>
+    </div>
+
     <div class="pa-save-bar">
       <button type="button" class="pa-save" id="pa-save">Enregistrer</button>
     </div>
@@ -125,6 +133,18 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
     e.preventDefault();
     fetch("/api/auth/logout",{method:"POST"}).finally(function(){ window.location.href="/"; });
   });
+
+  fetch("/api/admin/status").then(function(r){return r.ok?r.json():null;}).then(function(d){
+    if(!d || !d.authenticated) return;
+    var section = document.getElementById("pa-admin-section");
+    var link = document.getElementById("pa-admin-link");
+    if(!section || !link) return;
+    section.style.display = "block";
+    if(d.is_super){
+      link.setAttribute("href","/super-admin.html");
+      link.textContent = "🛡️ Ouvrir le tableau de bord super-administrateur";
+    }
+  }).catch(function(){});
 })();
 </script>
 </body>
