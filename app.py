@@ -632,8 +632,8 @@ def user_can_access_order(order):
 
 @app.route("/")
 def index():
-    """Page d'accueil protégée par compte client."""
-    return serve_html("index.html")
+    """Page d'accueil principale (Accueil-v2.html)."""
+    return serve_html("Accueil-v2.html")
 
 
 @app.route("/favicon.ico")
