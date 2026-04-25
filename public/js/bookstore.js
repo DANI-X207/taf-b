@@ -1160,6 +1160,38 @@
     }
   }
 
+  // ===== Footer : adapter le lien Connexion / Déconnexion =====
+  // Sur tous les pieds de page du projet, transformer automatiquement le lien
+  // "Connexion" en "Déconnexion" (vers /auth/logout) lorsque l'utilisateur est
+  // déjà authentifié. Met également à jour les liens du panier hérités
+  // (/Mon-panier.html) vers la nouvelle page /panier.html.
+  function updateFooterAuthLink() {
+    // Normalise d'abord les liens "Mon panier" hérités (sécurité côté client)
+    document.querySelectorAll('footer a[href="/Mon-panier.html"], footer a[href="Mon-panier.html"]').forEach(function (a) {
+      a.setAttribute("href", "/panier.html");
+    });
+    fetch("/api/auth/status", { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s || !s.authenticated) return;
+        // Recherche tout lien dans un footer pointant vers /login.html OU
+        // dont le texte contient "Connexion" (insensible à la casse).
+        var anchors = document.querySelectorAll("footer a");
+        anchors.forEach(function (a) {
+          var href = (a.getAttribute("href") || "").toLowerCase();
+          var txt = (a.textContent || "").trim().toLowerCase();
+          var isLoginLink = href.indexOf("/login") !== -1 || href.indexOf("login.html") !== -1;
+          var isLoginText = txt === "connexion" || txt === "se connecter";
+          if (isLoginLink || isLoginText) {
+            a.setAttribute("href", "/auth/logout");
+            a.textContent = "Déconnexion";
+            a.setAttribute("title", "Fermer ma session");
+          }
+        });
+      })
+      .catch(function () {});
+  }
+
   // Bouton de déconnexion accessible sur mobile dans le tableau admin
   // (la sidebar-footer est masquée sur écran étroit pour gagner de la place).
   function injectAdminMobileLogout() {
@@ -1183,6 +1215,7 @@
     var page = pageName();
     if (!isAdminAreaPage() && page !== "login" && page !== "register") {
       injectGlobalSubNav();
+      updateFooterAuthLink();
     }
     if (page === "admin") {
       [200, 800, 2000].forEach(function (d) { setTimeout(injectAdminMobileLogout, d); });
