@@ -25,7 +25,7 @@ const PAGE_TITLES = {
   Admin: `${SITE_NAME} — Admin`,
 };
 
-const PROTECTED_PAGES = new Set(["index.html", "PAGEMOD-Accueil.html", "PI_Produit.html", "Mon-panier.html", "Formulaire.html", "mon-compte.html", "mes-commandes.html", "parametres.html"]);
+const PROTECTED_PAGES = new Set(["index.html", "Accueil-v2.html", "PAGEMOD-Accueil.html", "Mon-panier.html", "Formulaire.html", "mon-compte.html", "mes-commandes.html", "parametres.html"]);
 const AUTH_PAGES = new Set(["login.html", "connexion.html", "register.html", "inscription.html"]);
 
 const HEAD_COMPAT = `<script>
@@ -132,7 +132,12 @@ function serveHtml(filename, req, res) {
   res.type("html").send(content);
 }
 
-router.get("/", (req, res) => serveHtml("index.html", req, res));
+router.get("/", (req, res) => {
+  if (isAuthenticated(req)) return serveHtml("Accueil-v2.html", req, res);
+  return serveHtml("vitrine.html", req, res);
+});
+
+router.get("/index.html", (req, res) => res.redirect("/"));
 
 router.get("/favicon.ico", (req, res) => res.status(204).end());
 
