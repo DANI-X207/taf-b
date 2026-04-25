@@ -3,6 +3,51 @@
    Ne modifie pas les couleurs, uniquement l'agencement.
    ============================================================= */
 
+/* ===== Sous-barre noire commune (injectée par bookstore.js) ===== */
+#magma-subnav {
+  background: #1f1d2c;
+  width: 100%;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+  font-family: Verdana, Arial, Helvetica, sans-serif;
+  position: relative;
+  z-index: 90;
+}
+#magma-subnav .magma-subnav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  height: 42px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+#magma-subnav .magma-subnav-inner::-webkit-scrollbar { display: none; }
+#magma-subnav .magma-subnav-link {
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  padding: 6px 0;
+  letter-spacing: .2px;
+  opacity: .92;
+  transition: color .15s, opacity .15s;
+}
+#magma-subnav .magma-subnav-link:hover {
+  color: #ff690c;
+  opacity: 1;
+}
+@media (max-width: 640px) {
+  #magma-subnav .magma-subnav-inner {
+    padding: 0 14px;
+    gap: 18px;
+    height: 40px;
+  }
+  #magma-subnav .magma-subnav-link { font-size: 12.5px; }
+}
+
 /* ── 1. Dropdown de navigation : z-index et overflow ────────────── */
 nav.wbMenuMain,
 .wbMenuMain,

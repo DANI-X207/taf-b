@@ -1108,10 +1108,65 @@
     }
   }
 
+  // ===== Sous-barre noire commune (Devenir vendeur, Produit, …) =====
+  // Injectée juste sous le header sur toutes les pages publiques pour garder
+  // une cohérence visuelle. Reprend le menu d'origine WEBDEV (index.html).
+  function injectGlobalSubNav() {
+    if (document.getElementById("magma-subnav")) return;
+    // Évite la duplication sur les pages WEBDEV qui possèdent déjà cette nav
+    // native (index.html, MABOUTIQUE.html, etc.)
+    if (document.querySelector("nav.wbMenuMain, .wbMenuMain")) return;
+
+    // Styles auto-portés (les pages vitrine/Accueil-v2 n'incluent pas magma-fixes.css)
+    if (!document.getElementById("magma-subnav-style")) {
+      var style = document.createElement("style");
+      style.id = "magma-subnav-style";
+      style.textContent =
+        '#magma-subnav{background:#1f1d2c;width:100%;border-bottom:1px solid rgba(255,255,255,.08);' +
+          'font-family:Verdana,Arial,Helvetica,sans-serif;position:relative;z-index:90;}' +
+        '#magma-subnav .magma-subnav-inner{max-width:1200px;margin:0 auto;padding:0 24px;display:flex;' +
+          'align-items:center;gap:28px;height:42px;overflow-x:auto;scrollbar-width:none;}' +
+        '#magma-subnav .magma-subnav-inner::-webkit-scrollbar{display:none;}' +
+        '#magma-subnav .magma-subnav-link{color:#fff !important;font-size:13px;font-weight:600;' +
+          'text-decoration:none;white-space:nowrap;padding:6px 0;letter-spacing:.2px;opacity:.92;' +
+          'transition:color .15s,opacity .15s;}' +
+        '#magma-subnav .magma-subnav-link:hover{color:#ff690c !important;opacity:1;}' +
+        '@media (max-width:640px){' +
+          '#magma-subnav .magma-subnav-inner{padding:0 14px;gap:18px;height:40px;}' +
+          '#magma-subnav .magma-subnav-link{font-size:12.5px;}' +
+        '}';
+      document.head.appendChild(style);
+    }
+
+    var bar = document.createElement("nav");
+    bar.id = "magma-subnav";
+    bar.setAttribute("aria-label", "Navigation secondaire");
+    bar.innerHTML =
+      '<div class="magma-subnav-inner">' +
+        '<a class="magma-subnav-link" href="/a-propos.html">Devenir vendeur</a>' +
+        '<a class="magma-subnav-link" href="/catalogue.html">Produit</a>' +
+        '<a class="magma-subnav-link" href="/catalogue.html?tri=ventes">Meilleures ventes</a>' +
+        '<a class="magma-subnav-link" href="/catalogue.html">Catégories</a>' +
+        '<a class="magma-subnav-link" href="/MABOUTIQUE.html">Boutiques</a>' +
+      '</div>';
+
+    // Insertion : juste après le header personnalisé (.topbar) si présent,
+    // sinon en tout début de body pour les pages WEBDEV exportées.
+    var topbar = document.querySelector("header.topbar");
+    if (topbar && topbar.parentNode) {
+      topbar.parentNode.insertBefore(bar, topbar.nextSibling);
+    } else {
+      document.body.insertBefore(bar, document.body.firstChild);
+    }
+  }
+
   function init() {
     applyTheme();
     setupResponsiveTopbar();
     var page = pageName();
+    if (!isAdminAreaPage() && page !== "login" && page !== "register") {
+      injectGlobalSubNav();
+    }
     if (!isAdminAreaPage()) addAdminLink();
     if (!isAdminAreaPage() && page !== "login" && page !== "register") startAdRotator();
     if (page === "admin-login") watchAdminLoginRedirect();
