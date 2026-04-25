@@ -1086,8 +1086,31 @@
     setInterval(tick, 30000 + Math.floor(Math.random() * 15000));
   }
 
+  function setupResponsiveTopbar() {
+    var topbar = document.querySelector(".topbar");
+    if (!topbar) return;
+    var nav = topbar.querySelector(".topbar-nav");
+    if (!topbar.querySelector(".menu-toggle")) {
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "menu-toggle";
+      btn.setAttribute("aria-label", "Ouvrir le menu");
+      btn.setAttribute("aria-expanded", "false");
+      btn.innerHTML = '<svg viewBox="0 0 24 24"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>';
+      var logo = topbar.querySelector(".logo");
+      if (logo && logo.nextSibling) topbar.insertBefore(btn, logo.nextSibling);
+      else topbar.appendChild(btn);
+      btn.addEventListener("click", function () {
+        if (!nav) return;
+        var open = nav.classList.toggle("is-open");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+    }
+  }
+
   function init() {
     applyTheme();
+    setupResponsiveTopbar();
     var page = pageName();
     if (!isAdminAreaPage()) addAdminLink();
     if (!isAdminAreaPage() && page !== "login" && page !== "register") startAdRotator();
