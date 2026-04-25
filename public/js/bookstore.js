@@ -832,23 +832,28 @@
       var qWrap = question.closest ? (question.closest(".pos16") || question.closest(".dzSpan") || question) : question;
       qWrap.style.display = "none";
     }
-    if (!document.getElementById("magma-settings-icon")) {
-      var qSlot = document.getElementById("dzA88");
+    // L'icône d'engrenage ne sert qu'à remplacer le bouton "?" du menu WEBDEV
+    // d'origine (slot #dzA88 sur index.html). Sur les pages modernes (Accueil-v2,
+    // vitrine, etc.) la roue est déjà présente dans la barre supérieure, on ne
+    // doit donc rien injecter ici pour éviter un bouton flottant en bas de page.
+    var qSlot = document.getElementById("dzA88");
+    if (qSlot && qSlot.parentNode && !document.getElementById("magma-settings-icon")) {
       var settings = document.createElement("button");
       settings.id = "magma-settings-icon";
       settings.type = "button";
       settings.title = "Paramètres";
       settings.setAttribute("aria-label", "Paramètres");
       settings.innerHTML = "⚙";
-      if (qSlot && qSlot.parentNode) {
-        qSlot.parentNode.style.display = "";
-        qSlot.style.display = "none";
-        var host = qSlot.parentNode;
-        host.appendChild(settings);
-      } else {
-        document.body.appendChild(settings);
-      }
+      qSlot.parentNode.style.display = "";
+      qSlot.style.display = "none";
+      qSlot.parentNode.appendChild(settings);
       settings.addEventListener("click", openSettingsModal);
+    }
+    // Sécurité : si une version précédente avait déjà ajouté le bouton au body,
+    // on le retire pour ne plus le voir en bas de page.
+    var stale = document.getElementById("magma-settings-icon");
+    if (stale && stale.parentNode === document.body) {
+      stale.parentNode.removeChild(stale);
     }
   }
 
@@ -1216,6 +1221,13 @@
     if (!isAdminAreaPage() && page !== "login" && page !== "register") {
       injectGlobalSubNav();
       updateFooterAuthLink();
+    }
+    // Nettoyage : si une ancienne version a laissé une pastille engrenage
+    // flottante en bas de la page, on la retire (l'icône Paramètres existe
+    // déjà dans la barre supérieure des pages modernes).
+    var floatGear = document.getElementById("magma-settings-icon");
+    if (floatGear && floatGear.parentNode === document.body) {
+      floatGear.parentNode.removeChild(floatGear);
     }
     if (page === "admin") {
       [200, 800, 2000].forEach(function (d) { setTimeout(injectAdminMobileLogout, d); });

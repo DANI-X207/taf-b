@@ -55,7 +55,18 @@
   .copyright{text-align:right;font-size:11px;color:#666;margin-top:32px;padding-top:20px;border-top:1px solid #2c2a3b}
 
   @media (max-width:980px){.foot-grid{grid-template-columns:1fr 1fr}.topbar-nav{display:none}}
-  @media (max-width:640px){.card{padding:28px 22px}.hero h1{font-size:26px}.foot-grid{grid-template-columns:1fr}}
+  @media (max-width:760px){
+    .topbar{height:auto;padding:8px 12px;flex-wrap:wrap;gap:8px;row-gap:8px}
+    .logo{font-size:13px;order:1}
+    .logo-mark{width:24px;height:24px;font-size:12px}
+    .icons{order:2;gap:10px;margin-left:auto}
+    .icon-btn .lbl{display:none}
+    .icon-btn svg{width:22px;height:22px}
+    .search{order:3;flex:1 1 100%;height:36px}
+    .search input{font-size:14px}
+    .search button{height:28px;padding:0 10px;font-size:11.5px}
+  }
+  @media (max-width:640px){.card{padding:28px 22px}.hero h1{font-size:26px}.foot-grid{grid-template-columns:1fr}body,html{overflow-x:hidden}}
 </style>
 </head>
 <body>

@@ -129,12 +129,27 @@
     .foot-grid{grid-template-columns:1fr 1fr}
     .topbar-nav{display:none}
   }
+  @media (max-width:760px){
+    .topbar{height:auto;padding:8px 12px;flex-wrap:wrap;gap:8px;row-gap:8px}
+    .logo{font-size:13px;order:1}
+    .logo-mark{width:24px;height:24px;font-size:12px}
+    .icons{order:2;gap:10px;margin-left:auto}
+    .icon-btn .lbl{display:none}
+    .icon-btn svg{width:22px;height:22px}
+    .search{order:3;flex:1 1 100%;height:36px}
+    .search input{font-size:14px}
+    .search button{height:28px;padding:0 10px;font-size:11.5px}
+    .page-hero{padding:36px 18px 28px}
+    .page-hero p{font-size:13px}
+  }
   @media (max-width:640px){
     .citem{grid-template-columns:70px 1fr;gap:12px;padding:16px}
     .citem .thumb{width:70px;height:94px}
     .citem .right{grid-column:1/-1;flex-direction:row;justify-content:space-between;align-items:center}
-    .wrap{padding:20px 14px}
+    .wrap{padding:20px 14px;max-width:100vw}
     .foot-grid{grid-template-columns:1fr}
+    .page-hero h1{font-size:22px}
+    body,html{overflow-x:hidden}
   }
 </style>
 </head>
