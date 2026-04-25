@@ -1079,6 +1079,56 @@ def clear_cart():
     return jsonify({"success": True})
 
 
+@app.route("/api/cart/update", methods=["POST"])
+@require_user_api
+def update_cart_item():
+    """Met à jour la quantité d'un livre dans le panier (respecte le stock)."""
+    data = request.get_json(silent=True) or {}
+    book_id = clean_int(data.get("id"), 1)
+    qty = clean_int(data.get("qty"), 1, 0)
+    cart = current_cart()
+    if qty <= 0:
+        cart = [item for item in cart if item["id"] != book_id]
+        save_cart(cart)
+        return jsonify({"success": True, "cart": cart})
+    conn = get_db()
+    row = conn.execute("SELECT stock FROM books WHERE id = ?", (book_id,)).fetchone()
+    conn.close()
+    if row is None:
+        return jsonify({"error": "Livre non trouvé"}), 404
+    max_stock = int(row["stock"])
+    final_qty = min(qty, max_stock) if max_stock > 0 else 0
+    found = False
+    for item in cart:
+        if item["id"] == book_id:
+            item["qty"] = final_qty
+            found = True
+            break
+    if not found:
+        return jsonify({"error": "Article absent du panier"}), 404
+    if final_qty <= 0:
+        cart = [item for item in cart if item["id"] != book_id]
+    save_cart(cart)
+    return jsonify({"success": True, "cart": cart, "max_stock": max_stock})
+
+
+@app.route("/api/my-orders", methods=["GET"])
+@require_user_api
+def my_orders():
+    """Liste les commandes de l'utilisateur connecté, plus récentes en premier."""
+    user = current_user()
+    if not user:
+        return jsonify([])
+    conn = get_db()
+    rows = conn.execute("SELECT * FROM orders WHERE user_id = ? ORDER BY id DESC", (user["id"],)).fetchall()
+    orders = []
+    for row in rows:
+        items = [dict(item) for item in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (row["id"],)).fetchall()]
+        orders.append(row_to_order(row, items))
+    conn.close()
+    return jsonify(orders)
+
+
 @app.route("/api/genres", methods=["GET"])
 def get_genres():
     """Liste les catégories disponibles dans le catalogue."""

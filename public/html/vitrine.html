@@ -154,14 +154,14 @@
 <!-- HEADER -->
 <header class="topbar">
   <a href="/" class="logo"><span class="logo-mark">M</span><span>Librairie Magma</span></a>
-  <form class="search" onsubmit="event.preventDefault();window.location='/MABOUTIQUE.html?q='+encodeURIComponent(this.q.value)">
+  <form class="search" onsubmit="event.preventDefault();window.location='/catalogue.html?q='+encodeURIComponent(this.q.value)">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input type="text" name="q" placeholder="Rechercher un article…">
     <button type="submit">Recherche</button>
   </form>
   <nav class="topbar-nav">
     <a href="/">Accueil</a>
-    <a href="/MABOUTIQUE.html">Mon Magma</a>
+    <a href="/catalogue.html">Mon Magma</a>
     <a href="/a-propos.html">à propos</a>
   </nav>
   <div class="icons">
@@ -198,7 +198,6 @@
   <div class="cta-banner">
     <h3>Les bonnes affaires n'attendent pas</h3>
     <p>Profitez de nos ventes spéciales pour découvrir des articles hors du commun à des prix imbattables. Attention, stocks très limités.</p>
-    <a class="btn-white" href="/MABOUTIQUE.html">Voir les offres</a>
   </div>
 </section>
 
@@ -376,7 +375,7 @@ fetch("/api/books").then(r=>r.json()).then(books=>{
   // Categories
   const cats=["Tous",...new Set(list.map(b=>b.genre).filter(Boolean))];
   document.getElementById("cats").innerHTML=cats.map((c,i)=>
-    `<span class="cat-chip ${i===0?'active':''}" onclick="window.location='/MABOUTIQUE.html${i===0?'':'?genre='+encodeURIComponent(c)}'">${esc(c)}</span>`
+    `<span class="cat-chip ${i===0?'active':''}" onclick="window.location='/catalogue.html${i===0?'':'?genre='+encodeURIComponent(c)}'">${esc(c)}</span>`
   ).join("");
 
   // Trends grid (8 first)
@@ -394,7 +393,7 @@ fetch("/api/books").then(r=>r.json()).then(books=>{
 
   // Strip (5 images from public/img)
   document.getElementById("strip").innerHTML=STRIP_IMGS.map(src=>
-    `<a class="strip-item" href="/MABOUTIQUE.html"><img src="${src}" alt="" onerror="this.style.display='none'"></a>`
+    `<a class="strip-item" href="/catalogue.html"><img src="${src}" alt="" onerror="this.style.display='none'"></a>`
   ).join("");
 
   // Dark section grid (last 4)
