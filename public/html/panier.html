@@ -15,6 +15,27 @@
 
   #magma-cart-badge,#magma-admin-link{display:none !important}
 
+  /* ===== CHECKOUT MODAL ===== */
+  .modal-back{position:fixed;inset:0;background:rgba(0,0,0,.55);display:none;align-items:center;justify-content:center;z-index:1000;padding:20px}
+  .modal-back.show{display:flex}
+  .modal{background:#fff;border-radius:10px;width:100%;max-width:520px;max-height:90vh;overflow:auto;box-shadow:0 18px 50px rgba(0,0,0,.25)}
+  .modal-head{padding:18px 22px;border-bottom:1px solid #f0f0f0;display:flex;justify-content:space-between;align-items:center}
+  .modal-head h3{font-size:17px;color:#2b293a;font-weight:700}
+  .modal-close{background:transparent;border:0;font-size:24px;color:#888;cursor:pointer;line-height:1}
+  .modal-body{padding:20px 22px}
+  .modal-body .field{margin-bottom:14px}
+  .modal-body label{display:block;font-size:12px;color:#555;font-weight:600;margin-bottom:5px}
+  .modal-body input,.modal-body select,.modal-body textarea{width:100%;padding:10px 12px;border:1px solid #ddd;border-radius:5px;font-size:13.5px;font-family:inherit;outline:0;background:#fff;color:#2d2d2d}
+  .modal-body input:focus,.modal-body select:focus,.modal-body textarea:focus{border-color:#ff690c}
+  .modal-body textarea{resize:vertical;min-height:60px}
+  .modal-foot{padding:16px 22px;border-top:1px solid #f0f0f0;display:flex;justify-content:flex-end;gap:10px;background:#fafafa;border-radius:0 0 10px 10px}
+  .modal-foot button{padding:10px 20px;border-radius:5px;font-weight:700;font-size:13px;cursor:pointer;border:0}
+  .modal-foot .btn-cancel{background:#fff;color:#555;border:1px solid #ddd}
+  .modal-foot .btn-confirm{background:#ff690c;color:#fff}
+  .modal-foot .btn-confirm:disabled{opacity:.55;cursor:wait}
+  .modal-err{background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:10px 12px;border-radius:5px;font-size:12.5px;margin-bottom:12px;display:none}
+  .modal-err.show{display:block}
+
   /* ===== HEADER (identique à Accueil-v2) ===== */
   .topbar{background:#2b293a;color:#fff;height:56px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
   .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0}
@@ -172,7 +193,7 @@
       <div class="sum-row"><span>Articles</span><span class="val" id="sum-count">0</span></div>
       <div class="sum-row"><span>Livraison</span><span class="val" style="color:#28a745;font-weight:700">À calculer</span></div>
       <div class="sum-row total"><span>Total</span><span class="val" id="sum-total">0 FCFA</span></div>
-      <a class="btn-orange checkout" href="/Mon-panier.html" id="checkout-btn">Passer la commande</a>
+      <button type="button" class="btn-orange checkout" id="checkout-btn">Passer la commande</button>
       <div class="ship-info">
         <strong>📍 Zones de livraison</strong>
         Pointe-Noire : Potopoto, Saint Exupéry, Présidence, OSH, CHU.
@@ -211,6 +232,46 @@
     <div class="copyright">© 2026 Librairie Magma — Tous droits réservés</div>
   </div>
 </footer>
+
+<div class="modal-back" id="checkout-modal" role="dialog" aria-modal="true" aria-labelledby="checkout-title">
+  <div class="modal">
+    <div class="modal-head">
+      <h3 id="checkout-title">Finaliser ma commande</h3>
+      <button type="button" class="modal-close" id="checkout-cancel" aria-label="Fermer">×</button>
+    </div>
+    <form id="checkout-form" novalidate>
+      <div class="modal-body">
+        <div class="modal-err" id="checkout-err"></div>
+        <div class="field">
+          <label for="co-name">Nom complet *</label>
+          <input type="text" id="co-name" name="customer_name" maxlength="140" required>
+        </div>
+        <div class="field">
+          <label for="co-email">Email *</label>
+          <input type="email" id="co-email" name="customer_email" required>
+        </div>
+        <div class="field">
+          <label for="co-phone">Téléphone *</label>
+          <input type="tel" id="co-phone" name="customer_phone" placeholder="+242 …" required>
+        </div>
+        <div class="field">
+          <label for="co-zone">Zone de livraison *</label>
+          <select id="co-zone" name="delivery_zone" required>
+            <option value="">— Choisir une zone —</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="co-address">Adresse précise *</label>
+          <textarea id="co-address" name="delivery_address" maxlength="260" required placeholder="Quartier, rue, point de repère…"></textarea>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button type="button" class="btn-cancel" id="checkout-cancel-2">Annuler</button>
+        <button type="submit" class="btn-confirm" id="checkout-confirm">Valider la commande</button>
+      </div>
+    </form>
+  </div>
+</div>
 
 <div class="toast" id="toast"></div>
 
@@ -369,8 +430,111 @@ async function clearAll(){
   }catch(e){ showToast('Erreur réseau', true); }
 }
 
+// ===== CHECKOUT =====
+let ME = null;
+let ZONES = [];
+
+async function loadMe(){
+  try{
+    const r = await fetch('/api/auth/status',{credentials:'same-origin'});
+    if(r.ok){
+      const data = await r.json();
+      ME = data && data.user ? data.user : null;
+    }
+  }catch(e){}
+}
+
+async function loadZones(){
+  try{
+    const r = await fetch('/api/delivery-zones',{credentials:'same-origin'});
+    if(r.ok){
+      ZONES = await r.json();
+    }
+  }catch(e){}
+  if(!ZONES || !ZONES.length){
+    ZONES = ["Potopoto la gare","Total vers Saint Exupérie","Présidence","OSH","CHU"];
+  }
+  const sel = document.getElementById('co-zone');
+  sel.innerHTML = '<option value="">— Choisir une zone —</option>' +
+    ZONES.map(z => `<option value="${esc(z)}">${esc(z)}</option>`).join('');
+}
+
+function openCheckout(){
+  if(!CART.length){ showToast('Votre panier est vide', true); return; }
+  const me = ME || {};
+  document.getElementById('co-name').value = me.name || me.username || '';
+  document.getElementById('co-email').value = me.email || '';
+  document.getElementById('co-phone').value = me.phone || '';
+  document.getElementById('co-zone').value = '';
+  document.getElementById('co-address').value = '';
+  const err = document.getElementById('checkout-err');
+  err.className = 'modal-err'; err.textContent = '';
+  document.getElementById('checkout-modal').classList.add('show');
+  setTimeout(()=>document.getElementById('co-name').focus(), 80);
+}
+
+function closeCheckout(){
+  document.getElementById('checkout-modal').classList.remove('show');
+}
+
+async function submitCheckout(ev){
+  ev.preventDefault();
+  const btn = document.getElementById('checkout-confirm');
+  const err = document.getElementById('checkout-err');
+  err.className = 'modal-err'; err.textContent = '';
+  const payload = {
+    customer_name: document.getElementById('co-name').value.trim(),
+    customer_email: document.getElementById('co-email').value.trim(),
+    customer_phone: document.getElementById('co-phone').value.trim(),
+    delivery_zone: document.getElementById('co-zone').value,
+    delivery_address: document.getElementById('co-address').value.trim()
+  };
+  if(!payload.customer_name || !payload.customer_email || !payload.customer_phone || !payload.delivery_zone || !payload.delivery_address){
+    err.className = 'modal-err show'; err.textContent = 'Tous les champs sont obligatoires.';
+    return;
+  }
+  btn.disabled = true;
+  const original = btn.textContent;
+  btn.textContent = 'Envoi en cours…';
+  try{
+    const r = await fetch('/api/orders',{
+      method:'POST', credentials:'same-origin',
+      headers:{'Content-Type':'application/json'},
+      body: JSON.stringify(payload)
+    });
+    if(r.status === 401){ window.location.href = '/login.html?next=' + encodeURIComponent('/panier.html'); return; }
+    const data = await r.json();
+    if(!r.ok){
+      err.className = 'modal-err show';
+      err.textContent = data.error || 'Erreur lors de la validation.';
+      return;
+    }
+    closeCheckout();
+    showToast('✓ Commande #' + data.order.id + ' envoyée !');
+    CART = [];
+    setTimeout(()=>{ window.location.href = '/mes-commandes.html'; }, 900);
+  }catch(e){
+    err.className = 'modal-err show';
+    err.textContent = 'Erreur réseau. Veuillez réessayer.';
+  }finally{
+    btn.disabled = false;
+    btn.textContent = original;
+  }
+}
+
+document.getElementById('checkout-btn').addEventListener('click', openCheckout);
+document.getElementById('checkout-cancel').addEventListener('click', closeCheckout);
+document.getElementById('checkout-cancel-2').addEventListener('click', closeCheckout);
+document.getElementById('checkout-form').addEventListener('submit', submitCheckout);
+document.getElementById('checkout-modal').addEventListener('click', function(ev){
+  if(ev.target === this) closeCheckout();
+});
+document.addEventListener('keydown', function(ev){
+  if(ev.key === 'Escape' && document.getElementById('checkout-modal').classList.contains('show')) closeCheckout();
+});
+
 (async function init(){
-  await loadStock();
+  await Promise.all([loadStock(), loadMe(), loadZones()]);
   await loadCart();
 })();
 </script>

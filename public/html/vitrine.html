@@ -369,7 +369,7 @@ function bindAddCartButtons(){
       fetch("/api/cart/add", {
         method: "POST", credentials: "same-origin",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({book_id: id, quantity: 1})
+        body: JSON.stringify({id: id, qty: 1})
       }).then(function(r){
         if(r.status === 401){
           showVitrineToast("Connectez-vous pour ajouter au panier.", "error");
@@ -425,7 +425,7 @@ fetch("/api/books").then(r=>r.json()).then(books=>{
 });
 
 // Cart count badge
-fetch("/api/cart/items").then(r=>r.ok?r.json():null).then(d=>{
+fetch("/api/cart",{credentials:"same-origin"}).then(r=>r.ok?r.json():null).then(d=>{
   if(!d)return;
   const items=Array.isArray(d)?d:(d.items||[]);
   const n=items.reduce((s,i)=>s+(i.qty||i.quantity||1),0);

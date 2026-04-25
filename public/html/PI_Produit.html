@@ -12,11 +12,22 @@
   img{display:block;max-width:100%}
   #magma-cart-badge,#magma-admin-link{display:none !important}
 
-  .topbar{background:#2b293a;color:#fff;height:56px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
+  .topbar{background:#2b293a;color:#fff;min-height:56px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100;flex-wrap:wrap}
   .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px}
   .logo-mark{width:28px;height:28px;background:#ff690c;border-radius:6px;display:grid;place-items:center;font-size:14px}
   .nav{display:flex;gap:18px;font-size:13px;margin-left:auto}
   .nav a{opacity:.85}.nav a:hover{opacity:1}
+  .menu-toggle{display:none;background:transparent;border:0;color:#fff;cursor:pointer;padding:6px 8px;border-radius:4px;align-items:center;justify-content:center}
+  .menu-toggle svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2}
+  .menu-toggle:hover{background:rgba(255,255,255,.08)}
+  @media (max-width:760px){
+    .topbar{padding:8px 14px;gap:10px}
+    .topbar .logo{flex:1 1 auto;min-width:0}
+    .topbar .menu-toggle{display:inline-flex;order:2}
+    .topbar .topbar-nav{order:5;flex:1 1 100%;flex-direction:column;align-items:stretch;gap:0;background:#1f1d2c;margin:6px -14px -10px;padding:4px 0;display:none}
+    .topbar .topbar-nav.is-open{display:flex}
+    .topbar .topbar-nav a{padding:13px 18px;border-bottom:1px solid rgba(255,255,255,.08);font-size:14px;opacity:1}
+  }
 
   .wrap{max-width:1100px;margin:24px auto;padding:0 24px}
   .back{display:inline-flex;align-items:center;gap:6px;color:#2b293a;font-weight:600;font-size:13px;margin-bottom:16px}
@@ -68,7 +79,6 @@
   @media (max-width:760px){
     .product{grid-template-columns:1fr;padding:18px}
     .cover-wrap{aspect-ratio:auto;max-width:240px;margin:0 auto}
-    .nav{display:none}
   }
 </style>
 </head>
@@ -76,10 +86,10 @@
 
 <header class="topbar">
   <a href="/" class="logo"><span class="logo-mark">M</span><span>Librairie Magma</span></a>
-  <nav class="nav">
+  <nav class="nav topbar-nav">
     <a href="/">Accueil</a>
-    <a href="/MABOUTIQUE.html">Catalogue</a>
-    <a href="/Mon-panier.html">Panier</a>
+    <a href="/catalogue.html">Catalogue</a>
+    <a href="/panier.html">Panier</a>
   </nav>
 </header>
 
