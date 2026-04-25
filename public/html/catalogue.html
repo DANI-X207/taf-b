@@ -70,7 +70,7 @@
   .pcard .ribbon{position:absolute;top:8px;right:8px;background:rgba(255,105,12,.95);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;letter-spacing:.3px}
   .pcard .stock-out{position:absolute;top:8px;left:8px;background:rgba(40,40,40,.85);color:#fff;font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px}
 
-  .empty{text-align:center;padding:50px 20px;background:#fff;border-radius:8px;color:#777;margin-top:24px}
+  .empty{text-align:center;padding:50px 20px;background:#fff;border-radius:8px;color:#777;margin-top:24px;grid-column:1/-1}
   .empty .ico{font-size:48px;margin-bottom:14px}
 
   /* ===== FOOTER ===== */
@@ -110,6 +110,10 @@
       <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
       <span class="cart-badge" id="cart-count">0</span>
       <span class="lbl">Panier</span>
+    </a>
+    <a class="icon-btn" href="/mes-commandes.html" title="Mes commandes">
+      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
+      <span class="lbl">Commandes</span>
     </a>
     <a class="icon-btn" href="/parametres.html" title="Paramètres">
       <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
@@ -232,12 +236,13 @@ function applyFilters(){
 function renderGrid(books){
   const grid = document.getElementById('cat-grid');
   const count = document.getElementById('cat-count');
+  if(!grid || !count) return;
   count.textContent = books.length===0 ? 'Aucun livre trouvé' : (books.length===1 ? '1 livre trouvé' : books.length+' livres trouvés');
-  grid.innerHTML = '';
   if(!books.length){
-    grid.outerHTML = '<div class="empty"><div class="ico">📚</div><p>Aucun livre ne correspond à votre recherche.</p></div>';
+    grid.innerHTML = '<div class="empty" style="grid-column:1/-1"><div class="ico">📚</div><p>Aucun livre ne correspond à votre recherche.</p></div>';
     return;
   }
+  grid.innerHTML = '';
   const frag = document.createDocumentFragment();
   books.forEach(b=>{
     const a = document.createElement('a');
@@ -258,7 +263,6 @@ function renderGrid(books){
     frag.appendChild(a);
   });
   grid.appendChild(frag);
-  // Câble les boutons "Ajouter au panier" sans déclencher la navigation
   grid.querySelectorAll('.add').forEach(btn=>{
     btn.addEventListener('click', function(e){
       e.preventDefault(); e.stopPropagation();
