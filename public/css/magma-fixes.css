@@ -1068,24 +1068,83 @@ img, video, iframe, svg { max-width: 100%; height: auto; }
   /* Cancel WEBDEV pos45 fixed top margin on mobile */
   .pos45 { margin-top: 16px !important; }
 
-  /* ===== login.html / register.html (custom 2-panel layout) ===== */
+  /* ===== login.html / register.html (custom 2-panel layout) =====
+     Sur mobile, on garde une bande de marque en haut (au lieu de tout cacher)
+     pour que la page paraisse moins vide et reste visuellement cohérente. */
   .container,
   #magma-login-shell .magma-auth-card,
   #magma-register-shell .magma-auth-card {
     flex-direction: column !important;
     width: 100% !important;
     max-width: 100vw !important;
-    min-height: 0 !important;
-    height: 100% !important;
+    min-height: 100% !important;
+    height: auto !important;
     border-radius: 0 !important;
     box-shadow: none !important;
-    overflow-y: auto !important;
+    overflow-y: visible !important;
   }
+  /* Bande de marque compacte en haut */
   .panel-left,
   #magma-login-shell .magma-auth-left,
   #magma-register-shell .magma-auth-left {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 14px !important;
+    flex: 0 0 auto !important;
+    min-width: 0 !important;
+    padding: 18px 22px !important;
+    min-height: 110px !important;
+  }
+  /* Logo plus petit */
+  .panel-left .logo-wrap,
+  #magma-login-shell .magma-auth-left > div > div:first-child,
+  #magma-register-shell .magma-auth-left > div > div:first-child {
+    width: 44px !important;
+    height: 44px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+  /* Titre + sous-titre alignés à droite du logo */
+  .panel-left h2,
+  #magma-login-shell .magma-auth-left h2,
+  #magma-register-shell .magma-auth-left h2 {
+    font-size: 18px !important;
+    line-height: 1.25 !important;
+    margin: 0 !important;
+  }
+  .panel-left h2 br,
+  #magma-login-shell .magma-auth-left h2 br,
+  #magma-register-shell .magma-auth-left h2 br { display: none !important; }
+  /* Le sous-titre (« Accédez à notre catalogue… ») et le lien « Déjà un compte ? »
+     du panneau register sont masqués sur mobile pour gagner de la place :
+     un lien équivalent existe déjà dans le panneau de droite. */
+  #magma-register-shell .magma-auth-left p,
+  #magma-register-shell .magma-auth-left > div:last-child {
     display: none !important;
   }
+  /* On replace le bloc interne (logo + h2) en ligne */
+  #magma-login-shell .magma-auth-left > div,
+  #magma-register-shell .magma-auth-left > div {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+    width: 100% !important;
+  }
+  /* Voile sombre du login : couvre toute la bande sur mobile */
+  #magma-login-shell .magma-auth-left > div:first-child {
+    position: absolute !important;
+    inset: 0 !important;
+    background: rgba(30,40,30,.45) !important;
+    z-index: 0 !important;
+  }
+  #magma-login-shell .magma-auth-left > div:nth-child(2) {
+    position: relative !important;
+    z-index: 1 !important;
+  }
+
   .panel-right,
   #magma-login-shell .magma-auth-right,
   #magma-register-shell .magma-auth-right {
@@ -1094,21 +1153,31 @@ img, video, iframe, svg { max-width: 100%; height: auto; }
     min-width: 0 !important;
     flex: 1 1 auto !important;
     flex-shrink: 1 !important;
-    padding: 28px 20px !important;
+    padding: 28px 22px 36px !important;
     box-sizing: border-box !important;
   }
   .panel-right h1,
   #magma-login-shell .magma-auth-right h1,
-  #magma-register-shell .magma-auth-right h1 { font-size: 26px !important; }
+  #magma-register-shell .magma-auth-right h1 { font-size: 24px !important; margin-bottom: 6px !important; }
+  .panel-right .subtitle,
+  #magma-login-shell .magma-auth-right > p:first-of-type,
+  #magma-register-shell .magma-auth-right > p:first-of-type { margin-bottom: 22px !important; }
   .field-group input,
   #magma-login-shell input,
-  #magma-register-shell input { font-size: 16px !important; } /* prevents iOS zoom */
+  #magma-register-shell input { font-size: 16px !important; } /* empêche le zoom iOS */
+  /* Espace plus aéré entre les champs */
+  #magma-login-shell .magma-auth-right > div,
+  #magma-register-shell .magma-auth-right > div { margin-bottom: 14px !important; }
+  /* Lien « Pas encore de compte ? / Mot de passe oublié » plus visibles */
+  #magma-login-shell .magma-auth-right > p,
+  #magma-register-shell .magma-auth-right > p { font-size: 14px !important; margin-top: 18px !important; }
 
-  /* The fixed full-screen shell: align top so long forms scroll */
+  /* Le shell plein écran : alignement haut pour que les formulaires longs scrollent */
   #magma-login-shell, #magma-register-shell {
     align-items: stretch !important;
     padding: 0 !important;
     overflow-y: auto !important;
+    background: #f2f2f2 !important;
   }
 
   /* ===== Catalog / book grid ===== */
