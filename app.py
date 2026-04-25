@@ -481,11 +481,15 @@ def require_admin_api(func):
     return wrapper
 
 
-def login_user(user_id):
-    """Ouvre une session client persistante avec cookies HttpOnly, Secure et SameSite strict."""
+def login_user(user_id, remember=True):
+    """Ouvre une session client.
+    Si remember est vrai, le cookie est persistant (PERMANENT_SESSION_LIFETIME, 7 jours par défaut).
+    Sinon, c'est un cookie de session qui expire à la fermeture du navigateur.
+    """
     session.clear()
-    session.permanent = True
+    session.permanent = bool(remember)
     session["user_id"] = int(user_id)
+    session["remember"] = bool(remember)
     session.modified = True
 
 
@@ -536,7 +540,7 @@ button,.link{{display:inline-block;background:#ff690c;color:#fff;border:0;border
 </form>
 </section>
 </div>
-<p><a class="link admin" href="/Admin.html">Connexion Admin</a> <a class="link" href="/api/source.zip">Télécharger le code source</a></p>
+<p><a class="link" href="/api/source.zip">Télécharger le code source</a></p>
 <p class="small">Session sécurisée : cookie HttpOnly, Secure, SameSite strict, expiration configurable à 7 jours par défaut.</p>
 </main>
 </body>
@@ -823,9 +827,14 @@ def auth_login():
     conn.execute("UPDATE users SET last_login_at = ? WHERE id = ?", (now_iso(), row["id"]))
     conn.commit()
     conn.close()
-    login_user(row["id"])
+    remember_value = data.get("remember") if hasattr(data, "get") else None
+    if isinstance(remember_value, str):
+        remember_flag = remember_value.lower() in ("1", "true", "yes", "on")
+    else:
+        remember_flag = bool(remember_value) if remember_value is not None else False
+    login_user(row["id"], remember=remember_flag)
     if request.is_json:
-        return jsonify({"success": True, "user": current_user()})
+        return jsonify({"success": True, "user": current_user(), "remember": remember_flag})
     return redirect(url_for("index"))
 
 
@@ -1386,9 +1395,15 @@ def admin_logout():
 
 
 def serve_admin_dashboard(role):
-    """Sert le tableau de bord admin/super-admin à partir de Admin.html."""
+    """Sert le tableau de bord admin/super-admin à partir de Admin.html.
+    L'accès est strictement réservé aux comptes administrateurs identifiés par téléphone.
+    """
+    if not is_authenticated():
+        # Visiteur anonyme : redirection vers la page de connexion classique.
+        return redirect("/login.html")
     if not require_admin():
-        return redirect("/Admin.html")
+        # Utilisateur connecté mais sans privilèges : retour à la vitrine/accueil.
+        return redirect(url_for("index"))
     current_role = admin_role() or "normal"
     if current_role != role:
         return redirect("/super-admin.html" if current_role == "super" else "/admin.html")
@@ -1424,6 +1439,19 @@ def admin_dashboard_normal():
 def admin_dashboard_super():
     """Tableau de bord super-administrateur."""
     return serve_admin_dashboard("super")
+
+
+@app.route("/Admin.html")
+def admin_legacy_redirect():
+    """L'ancienne page de connexion admin par mot de passe est supprimée.
+    L'accès admin se fait uniquement par téléphone reconnu lors de l'inscription / connexion.
+    """
+    if is_authenticated() and require_admin():
+        role = admin_role() or "normal"
+        return redirect("/super-admin.html" if role == "super" else "/admin.html")
+    if is_authenticated():
+        return redirect(url_for("index"))
+    return redirect("/login.html")
 
 
 @app.route("/api/admin/orders", methods=["GET"])

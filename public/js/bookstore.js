@@ -170,6 +170,12 @@
 
     tools.innerHTML = '<input id="magma-search" placeholder="Rechercher un livre ou auteur" style="flex:1;min-width:220px;padding:11px;border:1px solid #ddd;border-radius:12px;box-sizing:border-box;"> <select id="magma-genre" style="padding:11px;border:1px solid #ddd;border-radius:12px;"><option value="">Toutes les catégories</option></select>';
 
+    // Pré-remplit le champ de recherche si la page est ouverte avec ?q=... (depuis la barre du header)
+    try {
+      var initialQuery = new URLSearchParams(window.location.search).get("q");
+      if (initialQuery) document.getElementById("magma-search").value = initialQuery;
+    } catch (e) {}
+
     function load() {
       var q = document.getElementById("magma-search").value.trim();
       var genre = document.getElementById("magma-genre").value;
@@ -565,12 +571,29 @@
       openForgotPasswordModal(fieldStyle, labelStyle);
     });
 
+    // Pré-remplit l'email mémorisé si l'utilisateur avait déjà coché "Se souvenir de moi"
+    try {
+      var rememberedEmail = localStorage.getItem("magma_remember_email");
+      if (rememberedEmail) {
+        document.getElementById("login-email").value = rememberedEmail;
+        document.getElementById("remember-me").checked = true;
+      }
+    } catch (e) {}
+
     document.getElementById("login-submit").addEventListener("click", function () {
       var email = document.getElementById("login-email").value.trim();
       var pass = document.getElementById("login-password").value;
+      var remember = !!document.getElementById("remember-me").checked;
       if (!email || !pass) { toast("Veuillez saisir votre email et mot de passe.", "error"); return; }
-      post("/api/auth/login", { email: email, password: pass })
-        .then(function () { window.location.href = "/"; })
+      post("/api/auth/login", { email: email, password: pass, remember: remember })
+        .then(function () {
+          // Mémorise (ou efface) l'email côté navigateur selon le choix de l'utilisateur
+          try {
+            if (remember) localStorage.setItem("magma_remember_email", email);
+            else localStorage.removeItem("magma_remember_email");
+          } catch (e) {}
+          window.location.href = "/";
+        })
         .catch(function (err) { toast((err && err.error) || "Email ou mot de passe incorrect.", "error"); });
     });
 
