@@ -507,13 +507,14 @@
     });
   });
 
-  /* ── LOGOUT ── */
+  /* ── LOGOUT ──
+     On retire uniquement le rôle administrateur ; le compte client reste
+     connecté. On redirige donc vers la page d'accueil utilisateur au lieu
+     de réafficher l'écran de saisie du mot de passe administrateur. */
   document.getElementById("admin-logout-btn").addEventListener("click", function () {
-    post("/api/admin/logout", {}).then(function () {
-      dashboard.style.display = "none";
-      loginScreen.style.display = "flex";
-      document.getElementById("admin-password").value = "";
-    });
+    post("/api/admin/logout", {})
+      .then(function () { window.location.replace("/"); })
+      .catch(function () { window.location.replace("/"); });
   });
 
   /* ── LOGIN ── */
