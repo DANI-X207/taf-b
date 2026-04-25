@@ -91,7 +91,7 @@
         link.href = s.is_super ? "/super-admin.html" : "/admin.html";
         link.textContent = s.is_super ? "🛡️ Super Admin" : "🛠️ Admin";
         link.title = "Ouvrir le tableau de bord administrateur";
-        link.style.cssText = "position:fixed;right:18px;top:18px;z-index:99999;background:#2b293a;color:#fff;text-decoration:none;padding:9px 14px;border-radius:999px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.2);";
+        link.style.cssText = "position:fixed;right:18px;bottom:76px;z-index:99999;background:#2b293a;color:#fff;text-decoration:none;padding:9px 14px;border-radius:999px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.2);";
         document.body.appendChild(link);
       })
       .catch(function () {});
@@ -105,7 +105,7 @@
         badge = document.createElement("a");
         badge.id = "magma-cart-badge";
         badge.href = "/Mon-panier.html";
-        badge.style.cssText = "position:fixed;right:18px;top:62px;z-index:99999;background:#ff690c;color:#fff;text-decoration:none;padding:9px 14px;border-radius:999px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.2);";
+        badge.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:99999;background:#ff690c;color:#fff;text-decoration:none;padding:9px 14px;border-radius:999px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.2);";
         document.body.appendChild(badge);
       }
       badge.textContent = "Panier (" + count + ")";
@@ -1160,12 +1160,32 @@
     }
   }
 
+  // Bouton de déconnexion accessible sur mobile dans le tableau admin
+  // (la sidebar-footer est masquée sur écran étroit pour gagner de la place).
+  function injectAdminMobileLogout() {
+    if (document.getElementById("admin-mobile-logout")) return;
+    var dash = document.getElementById("admin-dashboard");
+    if (!dash) return;
+    var btn = document.createElement("button");
+    btn.id = "admin-mobile-logout";
+    btn.type = "button";
+    btn.textContent = "Déconnexion";
+    btn.addEventListener("click", function () {
+      var orig = document.getElementById("admin-logout-btn");
+      if (orig) orig.click();
+    });
+    document.body.appendChild(btn);
+  }
+
   function init() {
     applyTheme();
     setupResponsiveTopbar();
     var page = pageName();
     if (!isAdminAreaPage() && page !== "login" && page !== "register") {
       injectGlobalSubNav();
+    }
+    if (page === "admin") {
+      [200, 800, 2000].forEach(function (d) { setTimeout(injectAdminMobileLogout, d); });
     }
     if (!isAdminAreaPage()) addAdminLink();
     if (!isAdminAreaPage() && page !== "login" && page !== "register") startAdRotator();

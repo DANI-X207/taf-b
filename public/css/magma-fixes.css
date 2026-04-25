@@ -1426,3 +1426,93 @@ img, video, iframe, svg { max-width: 100%; height: auto; }
   .topbar .icons .auth-btn{padding:6px 10px;font-size:11.5px}
   .topbar .icons .icon-btn svg{width:22px;height:22px}
 }
+
+/* =============================================================
+   Admin / Super-Admin — Adaptation mobile portrait
+   Sur les écrans étroits, la sidebar verticale devient une barre
+   horizontale d'onglets en haut afin que toutes les sections
+   (icône + libellé) restent visibles sans devoir tourner le téléphone.
+   ============================================================= */
+@media (max-width: 700px) {
+  #admin-dashboard .sidebar {
+    position: relative !important;
+    left: auto !important; top: auto !important; bottom: auto !important;
+    width: 100% !important;
+    height: auto !important;
+    flex-direction: row !important;
+    box-shadow: 0 2px 10px rgba(20,20,40,.06) !important;
+    border-right: none !important;
+    border-bottom: 1px solid #ececf0;
+    z-index: 50 !important;
+  }
+  #admin-dashboard .sidebar-brand { display: none !important; }
+  #admin-dashboard .sidebar-nav {
+    flex: 1 1 auto !important;
+    display: flex !important;
+    flex-direction: row !important;
+    padding: 0 !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    scrollbar-width: none;
+  }
+  #admin-dashboard .sidebar-nav::-webkit-scrollbar { display: none; }
+  #admin-dashboard .nav-item {
+    display: flex !important;
+    flex: 0 0 auto !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+    padding: 10px 14px !important;
+    min-width: 78px !important;
+    border-left: 0 !important;
+    border-bottom: 3px solid transparent !important;
+  }
+  #admin-dashboard .nav-item span,
+  #admin-dashboard .nav-item span:not(.icon) {
+    display: inline !important;
+    font-size: 11px !important;
+    line-height: 1.15 !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+  }
+  #admin-dashboard .nav-item .icon {
+    font-size: 20px !important;
+    width: auto !important;
+  }
+  #admin-dashboard .nav-item.active {
+    border-left-color: transparent !important;
+    border-bottom-color: #ff690c !important;
+  }
+  body.admin-page #admin-dashboard .nav-item.active {
+    border-bottom-color: var(--magma-admin-accent, #1d4ed8) !important;
+  }
+  #admin-dashboard .sidebar-footer {
+    display: none !important;
+  }
+  #admin-dashboard .main-content {
+    margin-left: 0 !important;
+    padding: 16px 12px !important;
+  }
+  /* Bouton Déconnexion accessible : petit lien dans le coin supérieur droit */
+  #admin-dashboard::before {
+    content: "";
+    display: block;
+  }
+  #admin-mobile-logout {
+    position: fixed;
+    top: 8px; right: 8px;
+    background: rgba(255,255,255,.92);
+    color: #2b293a;
+    border: 1px solid #e2e2e8;
+    border-radius: 999px;
+    padding: 5px 10px;
+    font: 600 11px Arial, sans-serif;
+    z-index: 60;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,.08);
+  }
+}
+@media (min-width: 701px) {
+  #admin-mobile-logout { display: none !important; }
+}
