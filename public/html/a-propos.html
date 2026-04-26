@@ -18,8 +18,9 @@
 
   /* HEADER */
   .topbar{background:#2b293a;color:#fff;height:56px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
-  .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;text-decoration:none;color:inherit}
   .logo-mark{width:28px;height:28px;background:#ff690c;border-radius:6px;display:grid;place-items:center;font-size:14px}
+  .logo-img{height:42px;width:auto;display:block;object-fit:contain}
   .topbar-nav{display:flex;align-items:center;gap:18px;font-size:13px;margin-left:32px}
   .topbar-nav a{opacity:.85;white-space:nowrap}.topbar-nav a:hover,.topbar-nav a.active{opacity:1;color:#ff690c}
   .icons{display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0}
@@ -91,7 +92,7 @@
 <body>
 
 <header class="topbar">
-  <a href="/" class="logo"><span class="logo-mark">M</span><span>Librairie Magma</span></a>
+  <a href="/" class="logo" aria-label="Librairie Magma"><img class="logo-img" src="/img/Copilot_20260402_080209.png" alt="Librairie Magma"></a>
   <nav class="topbar-nav">
     <a href="/">Accueil</a>
     <a href="/MABOUTIQUE.html">Mon Magma</a>
@@ -99,7 +100,7 @@
   </nav>
   <div class="icons">
     <a class="icon-btn" href="/mon-compte.html"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg><span>Compte</span></a>
-    <a class="icon-btn" href="/Mon-panier.html"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg><span>Panier</span></a>
+    <a class="icon-btn" href="/panier.html"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg><span>Panier</span></a>
   </div>
 </header>
 

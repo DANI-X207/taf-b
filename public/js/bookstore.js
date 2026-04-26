@@ -49,6 +49,7 @@
     if (p.indexOf("PI_Produit") !== -1) return "detail";
     if (p.indexOf("MABOUTIQUE") !== -1) return "boutique";
     if (p.indexOf("register") !== -1 || p.indexOf("inscription") !== -1) return "register";
+    if (p.indexOf("reset-password") !== -1) return "reset";
     if (p.indexOf("login") !== -1 || p.indexOf("connexion") !== -1) return "login";
     if (p === "/admin.html" || p === "/super-admin.html") return "admin";
     if (p.indexOf("Admin") !== -1) return "admin-login";
@@ -104,7 +105,7 @@
       if (!badge) {
         badge = document.createElement("a");
         badge.id = "magma-cart-badge";
-        badge.href = "/Mon-panier.html";
+        badge.href = "/panier.html";
         badge.style.cssText = "position:fixed;right:18px;bottom:18px;z-index:99999;background:#ff690c;color:#fff;text-decoration:none;padding:9px 14px;border-radius:999px;font:700 13px Arial,sans-serif;box-shadow:0 10px 28px rgba(0,0,0,.2);";
         document.body.appendChild(badge);
       }
@@ -1200,7 +1201,9 @@
   // (/Mon-panier.html) vers la nouvelle page /panier.html.
   function updateFooterAuthLink() {
     // Normalise d'abord les liens "Mon panier" hérités (sécurité côté client)
-    document.querySelectorAll('footer a[href="/Mon-panier.html"], footer a[href="Mon-panier.html"]').forEach(function (a) {
+    // Couvre header, nav, footer et liens d'icônes : tout lien pointant vers
+    // /Mon-panier.html est ré-écrit vers la page panier moderne /panier.html.
+    document.querySelectorAll('a[href="/Mon-panier.html"], a[href="Mon-panier.html"]').forEach(function (a) {
       a.setAttribute("href", "/panier.html");
     });
     fetch("/api/auth/status", { credentials: "same-origin" })
@@ -1246,7 +1249,7 @@
     applyTheme();
     setupResponsiveTopbar();
     var page = pageName();
-    if (!isAdminAreaPage() && page !== "login" && page !== "register") {
+    if (!isAdminAreaPage() && page !== "login" && page !== "register" && page !== "reset") {
       injectGlobalSubNav();
       updateFooterAuthLink();
     }
@@ -1260,8 +1263,8 @@
     if (page === "admin") {
       [200, 800, 2000].forEach(function (d) { setTimeout(injectAdminMobileLogout, d); });
     }
-    if (!isAdminAreaPage()) addAdminLink();
-    if (!isAdminAreaPage() && page !== "login" && page !== "register") startAdRotator();
+    if (!isAdminAreaPage() && page !== "reset") addAdminLink();
+    if (!isAdminAreaPage() && page !== "login" && page !== "register" && page !== "reset") startAdRotator();
     if (page === "admin-login") watchAdminLoginRedirect();
     if (page === "admin") {
       watchAdminDashboard();
@@ -1275,7 +1278,7 @@
       }
     }
     if (page === "home") wireHomeIcons();
-    if (page !== "login" && page !== "register" && !isAdminAreaPage()) updateCartBadge();
+    if (page !== "login" && page !== "register" && page !== "reset" && !isAdminAreaPage()) updateCartBadge();
     if (page === "home") initHome();
     if (page === "cart") initCart();
     if (page === "detail") initDetail();

@@ -18,8 +18,9 @@
 
   /* ===== HEADER (identique à Accueil-v2) ===== */
   .topbar{background:#2b293a;color:#fff;height:56px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
-  .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;text-decoration:none;color:inherit}
   .logo-mark{width:28px;height:28px;background:#ff690c;border-radius:6px;display:grid;place-items:center;font-size:14px}
+  .logo-img{height:42px;width:auto;display:block;object-fit:contain}
   .search{flex:0 1 300px;height:34px;background:#fff;border-radius:4px;display:flex;align-items:center;padding:0 12px;gap:8px}
   .search input{flex:1;border:0;outline:0;font-size:13px;color:#2d2d2d;background:transparent;min-width:0}
   .search button{background:#ff690c;color:#fff;border:0;height:26px;padding:0 12px;border-radius:3px;font-weight:600;cursor:pointer;font-size:12px;flex-shrink:0}
@@ -109,7 +110,7 @@
 <body>
 
 <header class="topbar">
-  <a href="/" class="logo"><span class="logo-mark">M</span><span>Librairie Magma</span></a>
+  <a href="/" class="logo" aria-label="Librairie Magma"><img class="logo-img" src="/img/Copilot_20260402_080209.png" alt="Librairie Magma"></a>
   <form class="search" id="hdr-search-form">
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
     <input type="text" name="q" id="hdr-search" placeholder="Rechercher un article…">
