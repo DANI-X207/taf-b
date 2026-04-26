@@ -304,6 +304,16 @@ def init_db():
     add_column_if_missing(conn, "users", "is_active", "INTEGER NOT NULL DEFAULT 1")
     add_column_if_missing(conn, "users", "phone", "TEXT DEFAULT ''")
     conn.execute("""
+        CREATE TABLE IF NOT EXISTS password_resets (
+            token TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used_at TEXT,
+            FOREIGN KEY(user_id) REFERENCES users(id)
+        )
+    """)
+    conn.execute("""
         CREATE TABLE IF NOT EXISTS order_items (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             order_id INTEGER NOT NULL,
@@ -869,6 +879,88 @@ def api_auth_login():
 def api_auth_logout():
     """Alias JSON de déconnexion."""
     return auth_logout()
+
+
+@app.route("/api/auth/forgot-password", methods=["POST"])
+def api_auth_forgot_password():
+    """Vérifie l'identité du client (nom + téléphone + email) puis génère un lien
+    de réinitialisation valable 30 minutes. Le téléphone est comparé sur les
+    chiffres uniquement pour rester compatible avec le format 06-548-7909."""
+    data = request.get_json(silent=True) or {}
+    name = str(data.get("name") or "").strip()
+    phone_raw = str(data.get("phone") or "").strip()
+    email_raw = str(data.get("email") or "").strip()
+    if not name or not phone_raw or not email_raw:
+        return jsonify({"error": "Nom, numéro de téléphone et email sont obligatoires."}), 400
+    try:
+        email = clean_email(email_raw)
+    except ValueError:
+        return jsonify({"error": "Email invalide."}), 400
+    phone_digits = normalize_phone(phone_raw)
+    if len(phone_digits) != 9:
+        return jsonify({"error": "Le numéro doit comporter 9 chiffres (ex: 06-548-7909)."}), 400
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(?) AND LOWER(TRIM(name)) = LOWER(?)",
+        (email, name),
+    ).fetchone()
+    if row is None or normalize_phone(row["phone"] or "") != phone_digits:
+        conn.close()
+        return jsonify({"error": "Aucun compte ne correspond à ces trois informations."}), 404
+    if "is_active" in row.keys() and not row["is_active"]:
+        conn.close()
+        return jsonify({"error": "Ce compte a été désactivé. Contactez l'administrateur."}), 403
+    token = secrets.token_urlsafe(32)
+    created = now_iso()
+    expires = (datetime.utcnow() + timedelta(minutes=30)).isoformat(timespec="seconds")
+    conn.execute(
+        "INSERT INTO password_resets (token, user_id, created_at, expires_at) VALUES (?,?,?,?)",
+        (token, row["id"], created, expires),
+    )
+    conn.commit()
+    conn.close()
+    reset_link = url_for("html_page", filename="reset-password", _external=True) + "?token=" + token
+    return jsonify({
+        "message": "Identité confirmée. Cliquez sur le lien ci-dessous pour définir un nouveau mot de passe (valable 30 minutes).",
+        "resetLink": reset_link,
+    })
+
+
+@app.route("/api/auth/reset-password", methods=["POST"])
+def api_auth_reset_password():
+    """Consomme un jeton de réinitialisation et met à jour le mot de passe."""
+    data = request.get_json(silent=True) or {}
+    token = str(data.get("token") or "").strip()
+    new_password = data.get("password")
+    if not token:
+        return jsonify({"error": "Lien de réinitialisation manquant."}), 400
+    try:
+        password = clean_password(new_password)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    conn = get_db()
+    reset = conn.execute("SELECT * FROM password_resets WHERE token = ?", (token,)).fetchone()
+    if reset is None:
+        conn.close()
+        return jsonify({"error": "Lien invalide ou déjà utilisé."}), 400
+    if reset["used_at"]:
+        conn.close()
+        return jsonify({"error": "Ce lien a déjà été utilisé. Faites une nouvelle demande."}), 400
+    try:
+        expires = datetime.fromisoformat(reset["expires_at"])
+    except (TypeError, ValueError):
+        expires = datetime.utcnow() - timedelta(minutes=1)
+    if expires < datetime.utcnow():
+        conn.close()
+        return jsonify({"error": "Lien expiré. Faites une nouvelle demande."}), 400
+    conn.execute(
+        "UPDATE users SET password_hash = ? WHERE id = ?",
+        (generate_password_hash(password), reset["user_id"]),
+    )
+    conn.execute("UPDATE password_resets SET used_at = ? WHERE token = ?", (now_iso(), token))
+    conn.commit()
+    conn.close()
+    return jsonify({"success": True, "message": "Mot de passe mis à jour. Vous pouvez maintenant vous connecter."})
 
 
 @app.route("/<path:filename>.html")

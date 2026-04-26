@@ -716,7 +716,7 @@
         '<div id="forgot-error" style="display:none;background:#fee4e2;color:#b42318;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;"></div>' +
         '<div id="forgot-success" style="display:none;background:#ecfdf3;color:#1f7a4d;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;word-break:break-word;"></div>' +
         '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Nom</label><input id="forgot-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
-        '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Numéro de téléphone</label><input id="forgot-phone" type="tel" autocomplete="tel" style="' + fieldStyle + '"></div>' +
+        '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format 06-548-7909)</span></label><input id="forgot-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="06-548-7909" maxlength="12" style="' + fieldStyle + '"></div>' +
         '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Email</label><input id="forgot-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
         '<button id="forgot-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:600;border:none;border-radius:3px;cursor:pointer;">Vérifier</button>' +
         '<button id="forgot-close" type="button" style="width:100%;padding:11px;background:#2b293a;color:#fff;font-size:14px;font-weight:600;border:none;border-radius:3px;cursor:pointer;margin-top:10px;">Fermer</button>' +
@@ -724,16 +724,44 @@
     document.body.appendChild(overlay);
     document.getElementById("forgot-close").addEventListener("click", function () { overlay.remove(); });
     overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
+
+    // Auto-formatage identique à la création de compte : 06-548-7909 (XX-XXX-XXXX)
+    function formatForgotPhone(raw) {
+      var d = String(raw || "").replace(/\D+/g, "").slice(0, 9);
+      if (d.length <= 2) return d;
+      if (d.length <= 5) return d.slice(0, 2) + "-" + d.slice(2);
+      return d.slice(0, 2) + "-" + d.slice(2, 5) + "-" + d.slice(5, 9);
+    }
+    var forgotPhoneInput = document.getElementById("forgot-phone");
+    if (forgotPhoneInput) {
+      forgotPhoneInput.addEventListener("input", function () {
+        var caretAtEnd = this.selectionStart === this.value.length;
+        var formatted = formatForgotPhone(this.value);
+        this.value = formatted;
+        if (caretAtEnd) {
+          try { this.setSelectionRange(formatted.length, formatted.length); } catch (e) {}
+        }
+      });
+      forgotPhoneInput.addEventListener("blur", function () { this.value = formatForgotPhone(this.value); });
+    }
+
     document.getElementById("forgot-submit").addEventListener("click", function () {
       var errorBox = document.getElementById("forgot-error");
       var successBox = document.getElementById("forgot-success");
       errorBox.style.display = "none";
       successBox.style.display = "none";
       var name = document.getElementById("forgot-name").value.trim();
-      var phone = document.getElementById("forgot-phone").value.trim();
+      var phoneRaw = document.getElementById("forgot-phone").value.trim();
+      var phone = formatForgotPhone(phoneRaw);
+      document.getElementById("forgot-phone").value = phone;
       var email = document.getElementById("forgot-email").value.trim();
       if (!name || !phone || !email) {
         errorBox.textContent = "Nom, numéro de téléphone et email sont obligatoires.";
+        errorBox.style.display = "block";
+        return;
+      }
+      if (phone.replace(/\D+/g, "").length !== 9) {
+        errorBox.textContent = "Le numéro doit comporter 9 chiffres (ex: 06-548-7909).";
         errorBox.style.display = "block";
         return;
       }
