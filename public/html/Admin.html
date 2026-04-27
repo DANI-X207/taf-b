@@ -242,7 +242,6 @@
       <div class="nav-item" data-section="users"><span class="icon">👥</span><span>Utilisateurs</span></div>
       <div class="nav-item" data-section="books"><span class="icon">📚</span><span>Livres</span></div>
       <div class="nav-item" data-section="orders"><span class="icon">📦</span><span>Commandes</span></div>
-      <div class="nav-item" data-section="ads"><span class="icon">📢</span><span>Publicités</span></div>
       <div class="nav-item" data-section="downloads" data-super-only="1"><span class="icon">⬇️</span><span>Téléchargements</span></div>
     </nav>
     <div class="sidebar-footer">
@@ -262,7 +261,6 @@
         <div class="stat-box" data-go="orders" title="Voir les commandes"><div class="stat-label">Commandes</div><div class="stat-value" id="stat-orders">—</div><div class="stat-sub">au total</div></div>
         <div class="stat-box" data-go="orders" data-tab="active" title="Voir les commandes en cours"><div class="stat-label">En attente</div><div class="stat-value" id="stat-pending">—</div><div class="stat-sub">à traiter</div></div>
         <div class="stat-box" data-go="orders" data-tab="validated" title="Voir les commandes validées"><div class="stat-label">Validées</div><div class="stat-value" id="stat-validated">—</div><div class="stat-sub">double confirmation</div></div>
-        <div class="stat-box" data-go="ads" title="Voir les publicités"><div class="stat-label">Publicités</div><div class="stat-value" id="stat-ads">—</div><div class="stat-sub">actives</div></div>
       </div>
       <div class="card">
         <h3>Dernières commandes</h3>
@@ -370,26 +368,6 @@
       <div id="orders-list">Chargement…</div>
     </div>
 
-    <!-- ADS -->
-    <div class="section" id="section-ads">
-      <div class="page-header"><div><h2>Publicités</h2><p>Gérer les annonces affichées aux clients</p></div></div>
-      <div class="card">
-        <h3>Nouvelle publicité</h3>
-        <div class="form-grid">
-          <div class="form-group"><label>Titre *</label><input type="text" id="ad-title" placeholder="Titre de la publicité"></div>
-          <div class="form-group"><label>Lien (optionnel)</label><input type="text" id="ad-link" placeholder="https://…"></div>
-          <div class="form-group span2"><label>Message *</label><textarea id="ad-message" placeholder="Contenu de la publicité…" style="min-height:60px;"></textarea></div>
-        </div>
-        <div class="btn-group">
-          <button class="btn btn-primary" id="ad-save-btn">Publier la publicité</button>
-        </div>
-      </div>
-      <div class="card">
-        <h3>Publicités actives</h3>
-        <div id="ads-list">Chargement…</div>
-      </div>
-    </div>
-
     <!-- DOWNLOADS -->
     <div class="section" id="section-downloads" data-super-only="1">
       <div class="page-header"><div><h2>Téléchargements</h2><p>Ressources accessibles uniquement à l'administrateur</p></div></div>
@@ -486,7 +464,6 @@
     if (name === "users") loadUsers();
     if (name === "books") loadBooks();
     if (name === "orders") loadOrders();
-    if (name === "ads") loadAds();
     if (name === "dashboard") loadDashboard();
   }
   document.querySelectorAll(".nav-item").forEach(function (el) {
@@ -557,7 +534,6 @@
             + '<span class="order-status ' + statusClass(o.status) + '">' + esc(o.status) + '</span></div>';
         }).join("");
     }).catch(function () {});
-    get("/api/admin/ads").then(function (ads) { document.getElementById("stat-ads").textContent = ads.filter(function (a) { return a.active; }).length; }).catch(function () {});
   }
 
   /* ── USERS ── */
@@ -940,44 +916,6 @@
           loadOrders();
         })
         .catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
-    });
-  }
-
-  /* ── ADS ── */
-  document.getElementById("ad-save-btn").addEventListener("click", function () {
-    post("/api/admin/ads", { title: document.getElementById("ad-title").value, message: document.getElementById("ad-message").value, link: document.getElementById("ad-link").value, active: true })
-      .then(function () { toast("Publicité publiée."); document.getElementById("ad-title").value = ""; document.getElementById("ad-message").value = ""; document.getElementById("ad-link").value = ""; loadAds(); })
-      .catch(function (e) { toast((e && e.error) || "Erreur.", "error"); });
-  });
-
-  function loadAds() {
-    get("/api/admin/ads").then(function (ads) {
-      var list = document.getElementById("ads-list");
-      if (ads.length === 0) { list.innerHTML = '<p style="color:#999;font-size:13px;">Aucune publicité.</p>'; return; }
-      list.innerHTML = ads.map(function (a) {
-        return '<div class="ad-item" data-aid="' + a.id + '">'
-          + '<div class="ad-info"><strong>' + esc(a.title) + '</strong><small>' + esc(a.message) + (a.link ? ' — <a href="' + esc(a.link) + '" target="_blank" onclick="event.stopPropagation()">Lien ↗</a>' : '') + '</small></div>'
-          + '<button class="btn btn-danger btn-sm" data-ad-del="' + a.id + '" style="flex-shrink:0;">Supprimer</button></div>';
-      }).join("");
-      list.querySelectorAll(".ad-item").forEach(function (item) {
-        item.addEventListener("click", function (e) {
-          if (e.target.closest("button")) return;
-          var a = ads.find(function (x) { return String(x.id) === item.getAttribute("data-aid"); });
-          if (!a) return;
-          openModal("Publicité — " + a.title,
-            '<div class="modal-field"><div class="modal-field-label">Titre</div><div class="modal-field-value">' + esc(a.title) + '</div></div>'
-            + '<div class="modal-field"><div class="modal-field-label">Message</div><div class="modal-field-value" style="white-space:pre-wrap;">' + esc(a.message) + '</div></div>'
-            + (a.link ? '<div class="modal-field"><div class="modal-field-label">Lien</div><div class="modal-field-value"><a href="' + esc(a.link) + '" target="_blank" style="color:#ff690c;">' + esc(a.link) + '</a></div></div>' : '')
-            + '<div class="modal-field"><div class="modal-field-label">Créée le</div><div class="modal-field-value">' + fmtDate(a.created_at) + '</div></div>'
-          );
-        });
-      });
-      list.querySelectorAll("[data-ad-del]").forEach(function (btn) {
-        btn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          del("/api/admin/ads/" + btn.getAttribute("data-ad-del")).then(function () { toast("Publicité supprimée."); loadAds(); }).catch(function () { toast("Suppression impossible.", "error"); });
-        });
-      });
     });
   }
 

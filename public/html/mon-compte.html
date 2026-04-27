@@ -11,15 +11,18 @@
 <style>
 body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3f1f1); font-family:'Trebuchet MS',Arial,sans-serif; color:#2d2d2d; }
 
-#magma-cart-badge,#magma-admin-link{display:none !important}
+#magma-cart-badge{display:none !important}
 
 /* === HEADER (identique à la vitrine) === */
-.topbar{background:#2b293a;color:#fff;height:72px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100;font-family:Verdana,Arial,Helvetica,sans-serif}
+.topbar{background:#2b293a;color:#fff;height:88px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100;font-family:Verdana,Arial,Helvetica,sans-serif}
 .topbar a{text-decoration:none;color:inherit}
 .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;text-decoration:none;color:inherit}
-.logo-img{height:56px;width:auto;display:block;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(255,105,12,.35));transition:transform .2s}
+.logo-img{height:72px;width:auto;display:block;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(255,105,12,.35));transition:transform .2s}
 .logo:hover .logo-img{transform:scale(1.05)}
-.topbar-nav{display:flex;align-items:center;gap:18px;font-size:13px;margin-left:32px}
+.search{flex:0 1 300px;height:34px;background:#fff;border-radius:4px;display:flex;align-items:center;padding:0 12px;gap:8px}
+.search input{flex:1;border:0;outline:0;font-size:13px;color:#2d2d2d;background:transparent;min-width:0}
+.search button{background:#ff690c;color:#fff;border:0;height:26px;padding:0 12px;border-radius:3px;font-weight:600;cursor:pointer;font-size:12px;flex-shrink:0}
+.topbar-nav{display:flex;align-items:center;gap:18px;font-size:13px}
 .topbar-nav a{opacity:.85;white-space:nowrap}
 .topbar-nav a:hover,.topbar-nav a.active{opacity:1;color:#ff690c}
 .icons{display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0}
@@ -52,6 +55,11 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
 
 <header class="topbar">
   <a href="/" class="logo" aria-label="Librairie Magma"><img class="logo-img" src="/img/Copilot_20260402_080209.png" alt="Librairie Magma"></a>
+  <form class="search" action="/catalogue.html" method="get">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    <input type="text" name="q" placeholder="Rechercher un article…">
+    <button type="submit">Recherche</button>
+  </form>
   <nav class="topbar-nav">
     <a href="/">Accueil</a>
     <a href="/catalogue.html">Mon Magma</a>

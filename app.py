@@ -248,7 +248,7 @@ def add_column_if_missing(conn, table_name, column_name, definition):
 
 
 def init_db():
-    """Crée et migre les tables SQLite nécessaires aux livres, utilisateurs, commandes, avis et publicités."""
+    """Crée et migre les tables SQLite nécessaires aux livres, utilisateurs, commandes et avis."""
     os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
     conn = get_db()
     conn.execute("""
@@ -341,16 +341,6 @@ def init_db():
     """)
     add_column_if_missing(conn, "reviews", "user_id", "INTEGER REFERENCES users(id)")
     conn.execute("""
-        CREATE TABLE IF NOT EXISTS ads (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            message TEXT NOT NULL,
-            link TEXT DEFAULT '',
-            active INTEGER DEFAULT 1,
-            created_at TEXT NOT NULL
-        )
-    """)
-    conn.execute("""
         CREATE TABLE IF NOT EXISTS admin_phones (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             phone TEXT NOT NULL UNIQUE,
@@ -418,11 +408,11 @@ def init_db():
             [book + (now_iso(),) for book in books],
         )
 
-    if conn.execute("SELECT COUNT(*) FROM ads").fetchone()[0] == 0:
-        conn.execute(
-            "INSERT INTO ads (title, message, link, active, created_at) VALUES (?,?,?,?,?)",
-            ("Livraison ciblée", "Commandez vos livres dans la zone Potopoto la gare, Saint Exupérie, Présidence, OSH ou CHU.", "", 1, now_iso()),
-        )
+    # Nettoyage : table ads (publicités) supprimée du système.
+    try:
+        conn.execute("DROP TABLE IF EXISTS ads")
+    except Exception:
+        pass
 
     conn.execute("UPDATE orders SET status = 'Confirmée' WHERE status IN ('validated', 'confirmed')")
     conn.execute("UPDATE orders SET status = 'Annulée' WHERE status = 'cancelled'")
@@ -1425,15 +1415,6 @@ def post_book_review(book_id):
     return jsonify(review), 201
 
 
-@app.route("/api/ads", methods=["GET"])
-def get_ads():
-    """Liste les publicités actives visibles par les visiteurs."""
-    conn = get_db()
-    ads = [dict(row) for row in conn.execute("SELECT * FROM ads WHERE active = 1 ORDER BY id DESC").fetchall()]
-    conn.close()
-    return jsonify(ads)
-
-
 @app.route("/api/admin/status", methods=["GET"])
 def admin_status():
     """Retourne l'état de connexion administrateur (mot de passe ou téléphone)."""
@@ -1628,46 +1609,6 @@ def admin_update_order_status(order_id):
     items = [dict(item) for item in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,)).fetchall()]
     conn.close()
     return jsonify(row_to_order(order, items))
-
-
-@app.route("/api/admin/ads", methods=["GET"])
-@require_admin_api
-def admin_get_ads():
-    """Liste toutes les publicités pour l'espace administrateur."""
-    conn = get_db()
-    ads = [dict(row) for row in conn.execute("SELECT * FROM ads ORDER BY id DESC").fetchall()]
-    conn.close()
-    return jsonify(ads)
-
-
-@app.route("/api/admin/ads", methods=["POST"])
-@require_admin_api
-def admin_add_ad():
-    """Ajoute une publicité depuis l'espace administrateur."""
-    data = request.get_json(silent=True) or {}
-    try:
-        title = clean_text(data.get("title"), 160, True)
-        message = clean_text(data.get("message"), 500, True)
-        link = clean_url(data.get("link"), 500)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-    conn = get_db()
-    conn.execute("INSERT INTO ads (title, message, link, active, created_at) VALUES (?,?,?,?,?)", (title, message, link, 1 if data.get("active", True) else 0, now_iso()))
-    conn.commit()
-    ad = dict(conn.execute("SELECT * FROM ads WHERE id = last_insert_rowid()").fetchone())
-    conn.close()
-    return jsonify(ad), 201
-
-
-@app.route("/api/admin/ads/<int:ad_id>", methods=["DELETE"])
-@require_admin_api
-def admin_delete_ad(ad_id):
-    """Supprime une publicité depuis l'espace administrateur."""
-    conn = get_db()
-    conn.execute("DELETE FROM ads WHERE id = ?", (ad_id,))
-    conn.commit()
-    conn.close()
-    return jsonify({"success": True})
 
 
 @app.route("/api/admin/users", methods=["GET"])

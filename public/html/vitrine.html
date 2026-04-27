@@ -15,13 +15,13 @@
   img{display:block;max-width:100%}
 
   /* Hide floating badges injected by bookstore.js (we have our own) */
-  #magma-cart-badge,#magma-admin-link{display:none !important}
+  #magma-cart-badge{display:none !important}
 
   /* ===== HEADER ===== */
-  .topbar{background:#2b293a;color:#fff;height:72px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
+  .topbar{background:#2b293a;color:#fff;height:88px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
   .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;text-decoration:none;color:inherit}
   .logo-mark{width:28px;height:28px;background:#ff690c;border-radius:6px;display:grid;place-items:center;font-size:14px}
-  .logo-img{height:56px;width:auto;display:block;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(255,105,12,.35));transition:transform .2s}.logo:hover .logo-img{transform:scale(1.05)}
+  .logo-img{height:72px;width:auto;display:block;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(255,105,12,.35));transition:transform .2s}.logo:hover .logo-img{transform:scale(1.05)}
   .search{flex:0 1 300px;height:34px;background:#fff;border-radius:4px;display:flex;align-items:center;padding:0 12px;gap:8px}
   .search input{flex:1;border:0;outline:0;font-size:13px;color:#2d2d2d;background:transparent;min-width:0}
   .search button{background:#ff690c;color:#fff;border:0;height:26px;padding:0 12px;border-radius:3px;font-weight:600;cursor:pointer;font-size:12px;flex-shrink:0}
@@ -136,7 +136,7 @@
   .copyright{text-align:right;font-size:11px;color:#666;margin-top:32px;padding-top:20px;border-top:1px solid #2c2a3b}
 
   /* ===== HAMBURGER (mobile) ===== */
-  .menu-toggle{display:none;background:transparent;border:0;color:#fff;cursor:pointer;padding:6px 8px;border-radius:4px;align-items:center;justify-content:center}
+  .menu-toggle{display:none !important;visibility:hidden;background:transparent;border:0;color:#fff;cursor:pointer;padding:6px 8px;border-radius:4px;align-items:center;justify-content:center}
   .menu-toggle svg{width:24px;height:24px;stroke:#fff;fill:none;stroke-width:2}
   .menu-toggle:hover{background:rgba(255,255,255,.08)}
 
