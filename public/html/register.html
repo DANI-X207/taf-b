@@ -4,8 +4,298 @@
 <link rel="icon" type="image/png" href="/img/ICON-1.png">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>register</title>
+<title>Créer un compte — Librairie Magma</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: Arial, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8e8e8;
+    padding: 24px;
+  }
+
+  .container {
+    display: flex;
+    width: min(900px, 96vw);
+    min-height: 540px;
+    border-radius: 6px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,.18);
+  }
+
+  /* ── LEFT PANEL ── */
+  .panel-left {
+    flex: 1;
+    position: relative;
+    background: #2b293a;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 36px 32px 40px;
+    min-width: 260px;
+    color: #fff;
+  }
+
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 32px;
+  }
+  .logo-wrap img {
+    height: 110px;
+    width: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 4px 18px rgba(255,105,12,.45));
+  }
+
+  .panel-left h2 {
+    font-size: 26px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+
+  .panel-left .lead {
+    color: rgba(255,255,255,.7);
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .panel-left .footer-note {
+    border-top: 1px solid rgba(255,255,255,.15);
+    padding-top: 20px;
+    font-size: 12px;
+    color: rgba(255,255,255,.55);
+  }
+  .panel-left .footer-note a {
+    color: #ff690c;
+    text-decoration: none;
+    font-weight: 700;
+  }
+  .panel-left .footer-note a:hover { text-decoration: underline; }
+
+  /* ── RIGHT PANEL ── */
+  .panel-right {
+    width: 400px;
+    flex-shrink: 0;
+    background: #f9f9f9;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 40px;
+  }
+
+  .panel-right h1 {
+    font-size: 26px;
+    font-weight: 700;
+    color: #2b293a;
+    margin-bottom: 4px;
+  }
+
+  .panel-right .subtitle {
+    font-size: 14px;
+    color: #999;
+    margin-bottom: 24px;
+    line-height: 1.5;
+  }
+
+  .error-msg {
+    background: #fee4e2;
+    color: #b42318;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    font-size: 13px;
+  }
+
+  .field-group {
+    margin-bottom: 16px;
+  }
+  .field-group label {
+    display: block;
+    font-size: 13px;
+    color: #555;
+    margin-bottom: 6px;
+  }
+  .field-group .hint {
+    color: #aaa;
+    font-size: 11px;
+    font-weight: 400;
+  }
+  .field-group input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 14px;
+    background: #f4f4f4;
+    color: #333;
+    outline: none;
+    transition: border-color .15s, background .15s;
+  }
+  .field-group input:focus {
+    border-color: #ff690c;
+    background: #fff;
+  }
+
+  .btn-register {
+    width: 100%;
+    padding: 13px;
+    background: #ff690c;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 700;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    letter-spacing: .3px;
+    transition: background .15s;
+  }
+  .btn-register:hover { background: #e55a00; }
+  .btn-register:disabled { opacity: .6; cursor: not-allowed; }
+
+  .legal {
+    margin-top: 14px;
+    font-size: 12px;
+    color: #aaa;
+    text-align: center;
+  }
+
+  @media (max-width: 720px) {
+    .container { flex-direction: column; min-height: 0; }
+    .panel-left { min-width: 0; padding: 28px 28px 24px; }
+    .panel-right { width: 100%; padding: 32px 28px; }
+    .logo-wrap img { height: 80px; }
+    .panel-left h2 { font-size: 22px; }
+  }
+</style>
 </head>
 <body>
+
+<div class="container">
+  <!-- LEFT -->
+  <div class="panel-left">
+    <div>
+      <div class="logo-wrap">
+        <img src="/img/Copilot_20260402_080209.png" alt="Logo Librairie Magma">
+      </div>
+      <h2>Rejoignez<br>Librairie Magma</h2>
+      <p class="lead">Accédez à notre catalogue, gérez votre panier et suivez vos commandes en un seul espace.</p>
+    </div>
+    <div class="footer-note">
+      Déjà un compte ? <a href="/login.html">Se connecter</a>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="panel-right">
+    <h1>Créer un compte</h1>
+    <p class="subtitle">Remplissez le formulaire pour commencer.</p>
+
+    <div id="error-container"></div>
+
+    <form id="register-form" autocomplete="on" novalidate>
+      <div class="field-group">
+        <label for="reg-name">Nom complet</label>
+        <input type="text" id="reg-name" name="name" autocomplete="name" required>
+      </div>
+      <div class="field-group">
+        <label for="reg-email">Adresse email</label>
+        <input type="email" id="reg-email" name="email" autocomplete="email" required>
+      </div>
+      <div class="field-group">
+        <label for="reg-phone">Numéro de téléphone <span class="hint">(format XX-XX-XXXX)</span></label>
+        <input type="tel" id="reg-phone" name="phone" inputmode="numeric" autocomplete="tel" placeholder="XX-XX-XXXX" maxlength="12" required>
+      </div>
+      <div class="field-group">
+        <label for="reg-password">Mot de passe <span class="hint">(min. 8 caractères, lettre + chiffre)</span></label>
+        <input type="password" id="reg-password" name="password" autocomplete="new-password" required>
+      </div>
+      <button type="submit" id="reg-submit" class="btn-register">Créer mon compte</button>
+      <p class="legal">En créant un compte, vous acceptez nos <a href="/conditions.html" style="color:#ff690c;text-decoration:none;">conditions d'utilisation</a>.</p>
+    </form>
+  </div>
+</div>
+
+<script>
+(function () {
+  // Block bookstore.js auto-register overlay (the page is now self-contained).
+  window.MAGMA_REGISTER_PAGE_HAS_FORM = true;
+
+  function showError(msg) {
+    var container = document.getElementById("error-container");
+    container.innerHTML = '';
+    var d = document.createElement("div");
+    d.className = "error-msg";
+    d.textContent = msg;
+    container.appendChild(d);
+  }
+
+  // Display ?error=... from server-side redirects.
+  var params = new URLSearchParams(window.location.search);
+  var serverErr = params.get("error");
+  if (serverErr) showError(decodeURIComponent(serverErr));
+
+  // Auto-format phone: XX-XXX-XXXX (9 digits total).
+  function formatPhoneInput(rawDigits) {
+    var d = String(rawDigits || "").replace(/\D+/g, "").slice(0, 9);
+    if (d.length <= 2) return d;
+    if (d.length <= 5) return d.slice(0, 2) + "-" + d.slice(2);
+    return d.slice(0, 2) + "-" + d.slice(2, 5) + "-" + d.slice(5, 9);
+  }
+  var phoneInput = document.getElementById("reg-phone");
+  phoneInput.addEventListener("input", function () {
+    var caretAtEnd = this.selectionStart === this.value.length;
+    var formatted = formatPhoneInput(this.value);
+    this.value = formatted;
+    if (caretAtEnd) {
+      try { this.setSelectionRange(formatted.length, formatted.length); } catch (e) {}
+    }
+  });
+  phoneInput.addEventListener("blur", function () { this.value = formatPhoneInput(this.value); });
+
+  document.getElementById("register-form").addEventListener("submit", function (ev) {
+    ev.preventDefault();
+    var name = document.getElementById("reg-name").value.trim();
+    var email = document.getElementById("reg-email").value.trim();
+    var phone = formatPhoneInput(document.getElementById("reg-phone").value);
+    document.getElementById("reg-phone").value = phone;
+    var pass = document.getElementById("reg-password").value;
+    if (!name || !email || !phone || !pass) { showError("Veuillez remplir tous les champs."); return; }
+    if (phone.replace(/\D+/g, "").length !== 9) { showError("Le numéro doit comporter 9 chiffres (format XX-XX-XXXX)."); return; }
+
+    var btn = document.getElementById("reg-submit");
+    btn.disabled = true;
+    btn.textContent = "Création…";
+
+    fetch("/api/auth/register", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: name, email: email, phone: phone, password: pass })
+    }).then(function (r) {
+      return r.json().then(function (d) {
+        if (r.status === 409) {
+          window.location.href = "/login.html?info=" + encodeURIComponent("Un compte existe déjà. Connectez-vous.");
+        } else if (!r.ok) {
+          throw d;
+        } else {
+          window.location.href = "/";
+        }
+      });
+    }).catch(function (err) {
+      showError((err && err.error) || "Inscription impossible.");
+      btn.disabled = false;
+      btn.textContent = "Créer mon compte";
+    });
+  });
+})();
+</script>
 </body>
 </html>

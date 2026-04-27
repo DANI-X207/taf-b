@@ -208,7 +208,7 @@ def normalize_phone(value):
 
 
 def format_phone(value):
-    """Formate un numéro local en XX-XXX-XXXX (ex: 06-548-7909). Renvoie la valeur brute si format inattendu."""
+    """Formate un numéro local en XX-XXX-XXXX (ex: XX-XX-XXXX). Renvoie la valeur brute si format inattendu."""
     digits = normalize_phone(value)
     if len(digits) == 9:
         return f"{digits[0:2]}-{digits[2:5]}-{digits[5:9]}"
@@ -779,7 +779,7 @@ def auth_register():
         clean_phone(phone_raw)  # validation du caractère légal des entrées
         phone_digits = normalize_phone(phone_raw)
         if len(phone_digits) != 9:
-            raise ValueError("Le numéro doit comporter 9 chiffres au format 06-548-7909.")
+            raise ValueError("Le numéro doit comporter 9 chiffres au format XX-XX-XXXX.")
         phone = format_phone(phone_digits)
     except ValueError as exc:
         if request.is_json:
@@ -885,7 +885,7 @@ def api_auth_logout():
 def api_auth_forgot_password():
     """Vérifie l'identité du client (nom + téléphone + email) puis génère un lien
     de réinitialisation valable 30 minutes. Le téléphone est comparé sur les
-    chiffres uniquement pour rester compatible avec le format 06-548-7909."""
+    chiffres uniquement pour rester compatible avec le format XX-XX-XXXX."""
     data = request.get_json(silent=True) or {}
     name = str(data.get("name") or "").strip()
     phone_raw = str(data.get("phone") or "").strip()
@@ -898,7 +898,7 @@ def api_auth_forgot_password():
         return jsonify({"error": "Email invalide."}), 400
     phone_digits = normalize_phone(phone_raw)
     if len(phone_digits) != 9:
-        return jsonify({"error": "Le numéro doit comporter 9 chiffres (ex: 06-548-7909)."}), 400
+        return jsonify({"error": "Le numéro doit comporter 9 chiffres (ex: XX-XX-XXXX)."}), 400
     conn = get_db()
     row = conn.execute(
         "SELECT * FROM users WHERE LOWER(TRIM(email)) = LOWER(?) AND LOWER(TRIM(name)) = LOWER(?)",
@@ -1473,7 +1473,7 @@ def admin_add_phone():
     data = request.get_json(silent=True) or {}
     phone_norm = normalize_phone(data.get("phone"))
     if len(phone_norm) != 9:
-        return jsonify({"error": "Le numéro doit comporter 9 chiffres au format 06-548-7909."}), 400
+        return jsonify({"error": "Le numéro doit comporter 9 chiffres au format XX-XX-XXXX."}), 400
     if get_admin_phone_entry(phone_norm):
         return jsonify({"error": "Ce numéro est déjà admin."}), 409
     is_super = 1 if (data.get("is_super") and admin_role() == "super") else 0

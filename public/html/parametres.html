@@ -6,9 +6,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Librairie Magma — Paramètres</title>
 <link rel="stylesheet" href="/magma-fixes.css">
+<!-- skip-inject: magma-fixes.css -->
+<script>window.MAGMA_HOMEPAGE_CUSTOM=true;</script>
 <style>
 body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3f1f1); font-family:'Trebuchet MS',Arial,sans-serif; color:#2d2d2d; }
-.pa-wrap { max-width:760px; margin:60px auto; padding:0 18px; }
+
+#magma-cart-badge,#magma-admin-link{display:none !important}
+
+/* === HEADER (identique à la vitrine) === */
+.topbar{background:#2b293a;color:#fff;height:72px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100;font-family:Verdana,Arial,Helvetica,sans-serif}
+.topbar a{text-decoration:none;color:inherit}
+.logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;text-decoration:none;color:inherit}
+.logo-img{height:56px;width:auto;display:block;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(255,105,12,.35));transition:transform .2s}
+.logo:hover .logo-img{transform:scale(1.05)}
+.topbar-nav{display:flex;align-items:center;gap:18px;font-size:13px;margin-left:32px}
+.topbar-nav a{opacity:.85;white-space:nowrap}
+.topbar-nav a:hover,.topbar-nav a.active{opacity:1;color:#ff690c}
+.icons{display:flex;align-items:center;gap:14px;margin-left:auto;flex-shrink:0}
+.icon-btn{color:#fff;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:12px;text-decoration:none;position:relative}
+.icon-btn svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:1.8}
+.icon-btn:hover{opacity:.85}
+.cart-badge{position:absolute;top:-6px;right:-6px;background:#ff690c;color:#fff;border-radius:999px;font-size:10px;font-weight:700;min-width:16px;height:16px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+@media (max-width:900px){.topbar-nav{display:none}}
+@media (max-width:760px){.topbar{height:auto;padding:8px 12px;flex-wrap:wrap;gap:8px;row-gap:8px}.icon-btn span{display:none}}
+
+.pa-wrap { max-width:760px; margin:40px auto; padding:0 18px; }
 .pa-back { display:inline-flex; align-items:center; gap:6px; background:#2b293a; color:#fff; text-decoration:none; padding:10px 18px; border-radius:999px; font-weight:700; font-size:.9rem; margin-bottom:18px; }
 .pa-back:hover { background:#3a3850; }
 .pa-card { background:#fff; border-radius:18px; padding:32px; box-shadow:0 18px 60px rgba(0,0,0,.12); }
@@ -41,6 +63,35 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
 </style>
 </head>
 <body>
+
+<header class="topbar">
+  <a href="/" class="logo" aria-label="Librairie Magma"><img class="logo-img" src="/img/Copilot_20260402_080209.png" alt="Librairie Magma"></a>
+  <nav class="topbar-nav">
+    <a href="/">Accueil</a>
+    <a href="/catalogue.html">Mon Magma</a>
+    <a href="/a-propos.html">à propos</a>
+  </nav>
+  <div class="icons">
+    <a class="icon-btn" href="/mon-compte.html" title="Mon compte">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a8 8 0 0 1 16 0v1"/></svg>
+      <span class="lbl">Compte</span>
+    </a>
+    <a class="icon-btn" href="/panier.html" title="Panier">
+      <svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>
+      <span class="cart-badge" id="cart-count">0</span>
+      <span class="lbl">Panier</span>
+    </a>
+    <a class="icon-btn" href="/mes-commandes.html" title="Mes commandes">
+      <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h6"/></svg>
+      <span class="lbl">Commandes</span>
+    </a>
+    <a class="icon-btn active" href="/parametres.html" title="Paramètres">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.7 1.7 0 0 0 4.6 9a1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+      <span class="lbl">Paramètres</span>
+    </a>
+  </div>
+</header>
+
 <div class="pa-wrap">
   <a href="/" class="pa-back">← Retour à l'accueil</a>
   <div class="pa-card">

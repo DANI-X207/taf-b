@@ -4,6 +4,10 @@
 Librairie Magma est une librairie en ligne Python/Flask + SQLite. Le frontend WEBDEV exporté reste organisé en pages HTML séparées dans `public/html/` ; les protections, l'authentification et toutes les fonctionnalités métier sont gérées par le serveur Flask (`app.py`, point d'entrée `main.py` lancé par gunicorn sur le port 5000).
 
 ## Mises à jour récentes (avril 2026)
+- **Topbar unifiée** : la même barre noire (logo Magma + Accueil/Mon Magma/à propos + icônes Compte/Panier/Commandes/Paramètres) sur 11 pages : `vitrine`, `Accueil-v2`, `a-propos`, `catalogue`, `panier`, `PI_Produit`, `conditions`, `confidentialite`, `mon-compte`, `mes-commandes`, `parametres`. Lien « Mon Magma » pointe partout vers `/catalogue.html`.
+- **Logo plus visible** : `.logo-img` passé de 42px → 56px de hauteur, `.topbar` de 56px → 72px, drop-shadow orange + zoom hover.
+- **`register.html` autonome** : page complète split-panel (panneau sombre + formulaire blanc) avec son propre formulaire, formatage auto du téléphone et affichage d'erreur. `bookstore.js` détecte `MAGMA_REGISTER_PAGE_HAS_FORM` et n'injecte plus de doublon.
+- **Confidentialité du propriétaire** : tous les exemples « 06-548-7909 » remplacés par `XX-XX-XXXX` dans `app.py`, `bookstore.js` et `confidentialite.html`. Le numéro réel reste utilisé uniquement pour la reconnaissance admin.
 - **Page d'accueil conditionnelle** : les visiteurs anonymes voient `vitrine.html` (catalogue de présentation public), les utilisateurs connectés voient `Accueil-v2.html`.
 - **Catalogue public** : `/api/books`, `/api/books/<id>`, `/api/books/<id>/reviews` (GET), `/api/books/featured` et `/api/genres` ne nécessitent plus d'authentification — tout le monde peut feuilleter et lire les avis.
 - **Page détail livre `PI_Produit.html`** : entièrement reconstruite (couverture, titre, auteur, résumé, prix, stock, commentaires). Lecture publique ; ajouter au panier ou poster un avis redirige vers `/login.html` si non connecté.

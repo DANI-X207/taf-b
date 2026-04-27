@@ -609,6 +609,8 @@
   }
 
   function initRegister() {
+    // Skip the overlay shell when the page already contains its own form.
+    if (window.MAGMA_REGISTER_PAGE_HAS_FORM || document.getElementById("register-form")) return;
     var params = new URLSearchParams(window.location.search);
     var errorMsg = params.get("error");
     var errHtml = errorMsg
@@ -639,7 +641,7 @@
           errHtml +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Nom complet</label><input id="reg-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Adresse email</label><input id="reg-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
-          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format 06-548-7909)</span></label><input id="reg-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="06-548-7909" maxlength="12" style="' + fieldStyle + '"></div>' +
+          '<div style="margin-bottom:16px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format XX-XX-XXXX)</span></label><input id="reg-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="XX-XX-XXXX" maxlength="12" style="' + fieldStyle + '"></div>' +
           '<div style="margin-bottom:24px;"><label style="' + labelStyle + '">Mot de passe <span style="color:#aaa;font-size:11px;">(min. 8 caractères, lettre + chiffre)</span></label><input id="reg-password" type="password" autocomplete="new-password" style="' + fieldStyle + '"></div>' +
           '<button id="reg-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:700;border:none;border-radius:3px;cursor:pointer;letter-spacing:.3px;">Créer mon compte</button>' +
           '<p style="margin-top:16px;font-size:12px;color:#aaa;text-align:center;">En créant un compte, vous acceptez nos conditions d\'utilisation.</p>' +
@@ -648,7 +650,7 @@
 
     document.body.appendChild(shell);
 
-    // ===== Auto-formatage du numéro de téléphone : 06-548-7909 (XX-XXX-XXXX) =====
+    // ===== Auto-formatage du numéro de téléphone : XX-XX-XXXX (XX-XXX-XXXX) =====
     function formatPhoneInput(rawDigits) {
       var d = String(rawDigits || "").replace(/\D+/g, "").slice(0, 9);
       if (d.length <= 2) return d;
@@ -678,7 +680,7 @@
       document.getElementById("reg-phone").value = phone;
       var pass = document.getElementById("reg-password").value;
       if (!name || !email || !phone || !pass) { toast("Veuillez remplir tous les champs.", "error"); return; }
-      if (phone.replace(/\D+/g, "").length !== 9) { toast("Le numéro doit comporter 9 chiffres (ex: 06-548-7909).", "error"); return; }
+      if (phone.replace(/\D+/g, "").length !== 9) { toast("Le numéro doit comporter 9 chiffres (ex: XX-XX-XXXX).", "error"); return; }
       fetch("/api/auth/register", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: name, email: email, phone: phone, password: pass }) })
         .then(function (r) {
           return r.json().then(function (d) {
@@ -717,7 +719,7 @@
         '<div id="forgot-error" style="display:none;background:#fee4e2;color:#b42318;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;"></div>' +
         '<div id="forgot-success" style="display:none;background:#ecfdf3;color:#1f7a4d;padding:10px 14px;border-radius:4px;margin:0 0 14px;font-size:13px;word-break:break-word;"></div>' +
         '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Nom</label><input id="forgot-name" type="text" autocomplete="name" style="' + fieldStyle + '"></div>' +
-        '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format 06-548-7909)</span></label><input id="forgot-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="06-548-7909" maxlength="12" style="' + fieldStyle + '"></div>' +
+        '<div style="margin-bottom:14px;"><label style="' + labelStyle + '">Numéro de téléphone <span style="color:#aaa;font-size:11px;">(format XX-XX-XXXX)</span></label><input id="forgot-phone" type="tel" inputmode="numeric" autocomplete="tel" placeholder="XX-XX-XXXX" maxlength="12" style="' + fieldStyle + '"></div>' +
         '<div style="margin-bottom:18px;"><label style="' + labelStyle + '">Email</label><input id="forgot-email" type="email" autocomplete="email" style="' + fieldStyle + '"></div>' +
         '<button id="forgot-submit" type="button" style="width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:600;border:none;border-radius:3px;cursor:pointer;">Vérifier</button>' +
         '<button id="forgot-close" type="button" style="width:100%;padding:11px;background:#2b293a;color:#fff;font-size:14px;font-weight:600;border:none;border-radius:3px;cursor:pointer;margin-top:10px;">Fermer</button>' +
@@ -726,7 +728,7 @@
     document.getElementById("forgot-close").addEventListener("click", function () { overlay.remove(); });
     overlay.addEventListener("click", function (e) { if (e.target === overlay) overlay.remove(); });
 
-    // Auto-formatage identique à la création de compte : 06-548-7909 (XX-XXX-XXXX)
+    // Auto-formatage identique à la création de compte : XX-XX-XXXX (XX-XXX-XXXX)
     function formatForgotPhone(raw) {
       var d = String(raw || "").replace(/\D+/g, "").slice(0, 9);
       if (d.length <= 2) return d;
@@ -762,7 +764,7 @@
         return;
       }
       if (phone.replace(/\D+/g, "").length !== 9) {
-        errorBox.textContent = "Le numéro doit comporter 9 chiffres (ex: 06-548-7909).";
+        errorBox.textContent = "Le numéro doit comporter 9 chiffres (ex: XX-XX-XXXX).";
         errorBox.style.display = "block";
         return;
       }
