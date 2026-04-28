@@ -18,10 +18,14 @@
   #magma-cart-badge{display:none !important}
 
   /* ===== HEADER ===== */
-  .topbar{background:#2b293a;color:#fff;height:88px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
-  .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;text-decoration:none;color:inherit}
-  .logo-mark{width:28px;height:28px;background:#ff690c;border-radius:6px;display:grid;place-items:center;font-size:14px}
-  .logo-img{height:72px;width:auto;display:block;object-fit:contain;filter:drop-shadow(0 2px 6px rgba(255,105,12,.35));transition:transform .2s}.logo:hover .logo-img{transform:scale(1.05)}
+  .topbar{background:#2b293a;color:#fff;height:96px;display:flex;align-items:center;padding:0 24px;gap:20px;position:sticky;top:0;z-index:100}
+  .logo{display:flex;align-items:center;gap:8px;font-weight:700;font-size:15px;flex-shrink:0;text-decoration:none;color:inherit;position:relative;padding:6px 14px;border-radius:14px;transition:background .25s}
+  .logo::before{content:"";position:absolute;inset:-4px;border-radius:18px;background:radial-gradient(circle at 30% 30%,rgba(255,105,12,.35),rgba(255,105,12,0) 65%);opacity:.85;z-index:0;pointer-events:none;transition:opacity .25s}
+  .logo:hover{background:rgba(255,255,255,.04)}
+  .logo:hover::before{opacity:1}
+  .logo-mark{width:28px;height:28px;background:#ff690c;border-radius:6px;display:grid;place-items:center;font-size:14px;position:relative;z-index:1}
+  .logo-img{height:84px;width:auto;display:block;object-fit:contain;position:relative;z-index:1;filter:drop-shadow(0 4px 12px rgba(255,105,12,.55)) drop-shadow(0 0 18px rgba(255,105,12,.25));transition:transform .3s ease,filter .3s ease}
+  .logo:hover .logo-img{transform:scale(1.08) rotate(-2deg);filter:drop-shadow(0 6px 18px rgba(255,105,12,.75)) drop-shadow(0 0 24px rgba(255,105,12,.45))}
   .search{flex:0 1 300px;height:34px;background:#fff;border-radius:4px;display:flex;align-items:center;padding:0 12px;gap:8px}
   .search input{flex:1;border:0;outline:0;font-size:13px;color:#2d2d2d;background:transparent;min-width:0}
   .search button{background:#ff690c;color:#fff;border:0;height:26px;padding:0 12px;border-radius:3px;font-weight:600;cursor:pointer;font-size:12px;flex-shrink:0}
