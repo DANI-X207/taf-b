@@ -8,6 +8,31 @@ const { authPageHtml } = require("./pages");
 
 const router = express.Router();
 
+// === Admin-by-phone recognition (parity with Flask app.py) ===================
+// Super admin: 06-548-7909 (owner). Other numbers = normal admin.
+const ADMIN_PHONES = {
+  "065487909": { is_super: true },
+  "050271841": { is_super: false },
+  "064280982": { is_super: false },
+  "066342094": { is_super: false },
+  "066059986": { is_super: false },
+  "069680847": { is_super: false },
+};
+
+function adminPhoneInfo(phone) {
+  const norm = String(phone || "").replace(/\D+/g, "");
+  return ADMIN_PHONES[norm] || null;
+}
+
+function applyAdminFromPhone(req, user) {
+  const info = adminPhoneInfo(user && user.phone);
+  if (info) {
+    req.session.admin_authenticated = true;
+    req.session.admin_role = info.is_super ? "super" : "normal";
+    req.session.admin_via_phone = true;
+  }
+}
+
 function resetPasswordHtml(content) {
   return `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Librairie Magma — Réinitialisation</title><style>body{margin:0;min-height:100vh;background:#e8e8e8;font-family:Arial,sans-serif;color:#333;display:flex;align-items:center;justify-content:center;padding:24px;box-sizing:border-box;}main{width:min(480px,100%);background:#fff;border-radius:6px;padding:34px;box-shadow:0 8px 32px rgba(0,0,0,.18);}h1{font-size:26px;font-weight:400;color:#888;margin:0 0 18px;}label{display:block;font-size:13px;color:#555;margin:14px 0 6px;}input{width:100%;padding:10px 12px;border:1px solid #ccc;border-radius:3px;font-size:14px;background:#f0f0f0;color:#333;box-sizing:border-box;}button,.link{display:inline-block;width:100%;padding:13px;background:#ff690c;color:#fff;font-size:15px;font-weight:600;border:none;border-radius:3px;cursor:pointer;text-align:center;text-decoration:none;box-sizing:border-box;margin-top:18px;}.error{background:#fee4e2;color:#b42318;padding:10px 14px;border-radius:4px;font-size:13px;}.success{background:#ecfdf3;color:#1f7a4d;padding:10px 14px;border-radius:4px;font-size:13px;}.small{font-size:13px;color:#888;line-height:1.5;word-break:break-word;}</style></head><body><main>${content}</main></body></html>`;
 }
@@ -99,6 +124,7 @@ router.post("/auth/login", async (req, res) => {
     }
     await db.run("UPDATE users SET last_login_at = ? WHERE id = ?", nowIso(), matchedRow.id);
     req.session.user_id = matchedRow.id;
+    applyAdminFromPhone(req, matchedRow);
     if (req.is("json")) return res.json({ success: true });
     return res.redirect("/");
   } catch (e) {
@@ -205,6 +231,10 @@ router.post("/auth/reset-password", async (req, res) => {
 
 router.get("/api/auth/status", async (req, res) => {
   const user = await getCurrentUser(req);
+  // Re-apply admin status from phone in case the user logged in before this feature was added.
+  if (user && !req.session.admin_authenticated) {
+    applyAdminFromPhone(req, user);
+  }
   res.json({ authenticated: isAuthenticated(req), user, admin: !!req.session.admin_authenticated });
 });
 

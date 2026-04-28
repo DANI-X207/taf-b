@@ -62,10 +62,37 @@ async function tryValidateOrder(db, orderId) {
   return order;
 }
 
-router.get("/api/admin/status", (req, res) => {
+// Mirrored from src/routes/auth.js so admin status auto-detects from the
+// logged-in user's phone (parity with Flask app.py).
+const ADMIN_PHONES_STATUS = {
+  "065487909": { is_super: true },
+  "050271841": { is_super: false },
+  "064280982": { is_super: false },
+  "066342094": { is_super: false },
+  "066059986": { is_super: false },
+  "069680847": { is_super: false },
+};
+
+router.get("/api/admin/status", async (req, res) => {
+  // If not yet flagged, see if the current logged-in user's phone matches an admin number.
+  if (!req.session.admin_authenticated && req.session.user_id) {
+    try {
+      const db = await getDb();
+      const user = await db.get("SELECT phone FROM users WHERE id = ?", req.session.user_id);
+      const norm = String((user && user.phone) || "").replace(/\D+/g, "");
+      const info = ADMIN_PHONES_STATUS[norm];
+      if (info) {
+        req.session.admin_authenticated = true;
+        req.session.admin_role = info.is_super ? "super" : "normal";
+        req.session.admin_via_phone = true;
+      }
+    } catch (e) { /* ignore — fall through */ }
+  }
   res.json({
     authenticated: !!req.session.admin_authenticated,
     role: req.session.admin_role || (req.session.admin_authenticated ? "normal" : null),
+    is_super: req.session.admin_role === "super",
+    via_phone: !!req.session.admin_via_phone,
   });
 });
 
@@ -197,31 +224,6 @@ router.post("/api/admin/orders/:id/status", requireAdmin(), (req, res, next) => 
   next();
 });
 
-router.get("/api/admin/ads", requireAdmin(), async (req, res) => {
-  try {
-    const db = await getDb();
-    const ads = await db.all("SELECT * FROM ads ORDER BY id DESC");
-    res.json(ads);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-router.post("/api/admin/ads", requireAdmin(), async (req, res) => {
-  const data = req.body || {};
-  try {
-    const title = cleanText(data.title, 160, true);
-    const message = cleanText(data.message, 500, true);
-    const link = cleanUrl(data.link, 500);
-    const db = await getDb();
-    const result = await db.run("INSERT INTO ads (title, message, link, active, created_at) VALUES (?,?,?,?,?)", title, message, link, data.active !== false ? 1 : 0, nowIso());
-    const ad = await db.get("SELECT * FROM ads WHERE id = ?", result.lastID);
-    return res.status(201).json(ad);
-  } catch (e) {
-    return res.status(400).json({ error: e.message });
-  }
-});
-
 router.post("/api/admin/upload-cover", requireAdmin(), (req, res) => {
   uploadCover.single("file")(req, res, (err) => {
     if (err) {
@@ -233,16 +235,6 @@ router.post("/api/admin/upload-cover", requireAdmin(), (req, res) => {
     if (!req.file) return res.status(400).json({ error: "Aucun fichier reçu." });
     return res.json({ success: true, url: "/uploads/covers/" + req.file.filename });
   });
-});
-
-router.delete("/api/admin/ads/:id", requireAdmin(), async (req, res) => {
-  try {
-    const db = await getDb();
-    await db.run("DELETE FROM ads WHERE id = ?", parseInt(req.params.id));
-    res.json({ success: true });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
 });
 
 module.exports = router;
