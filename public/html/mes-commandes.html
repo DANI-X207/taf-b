@@ -114,8 +114,8 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
     <div class="mo-filters" id="mo-filters">
       <button class="active" data-f="all">Toutes</button>
       <button data-f="En attente">En attente</button>
-      <button data-f="Validée">Validées</button>
-      <button data-f="Reçue">Reçues</button>
+      <button data-f="Confirmée">Confirmées</button>
+      <button data-f="Terminée">Terminées</button>
       <button data-f="Annulée">Annulées</button>
     </div>
     <div id="mo-list"><p class="mo-empty">Chargement…</p></div>
@@ -133,8 +133,8 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
     return new Date(s+"Z");
   }
   function fmtDate(s){if(!s)return"—";var d=parseServerDate(s);return (!d||isNaN(d))?s:d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}
-  var STATUS_BG={"En attente":"#fef9c3","Confirmée":"#dcfce7","En livraison":"#dbeafe","Livrée":"#ede9fe","Annulée":"#fee4e2","Validée":"#d1fae5","Reçue":"#cffafe"};
-  var STATUS_FG={"En attente":"#854d0e","Confirmée":"#166534","En livraison":"#1e40af","Livrée":"#5b21b6","Annulée":"#b42318","Validée":"#065f46","Reçue":"#0e7490"};
+  var STATUS_BG={"En attente":"#fef9c3","Confirmée":"#dcfce7","En livraison":"#dbeafe","Livrée":"#ede9fe","Annulée":"#fee4e2","Terminée":"#d1fae5"};
+  var STATUS_FG={"En attente":"#854d0e","Confirmée":"#166534","En livraison":"#1e40af","Livrée":"#5b21b6","Annulée":"#b42318","Terminée":"#065f46"};
   var allOrders=[]; var currentFilter="all";
   // Live countdown state — updated every second by tickCountdowns()
   var countdownTimer = null;
@@ -172,30 +172,30 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
 
   function render(){
     var list=document.getElementById("mo-list");
-    var filtered=currentFilter==="all"?allOrders:allOrders.filter(function(o){return (o.status||"")===currentFilter || (currentFilter==="Validée" && (o.status==="Confirmée"||o.status==="Livrée"||o.status==="Validée"));});
+    var filtered=currentFilter==="all"?allOrders:allOrders.filter(function(o){return (o.status||"")===currentFilter;});
     if(!filtered.length){list.innerHTML='<p class="mo-empty">Aucune commande dans cette catégorie.</p>';return;}
     list.innerHTML=filtered.map(function(o){
       var bg=STATUS_BG[o.status]||"#f3f4f6"; var fg=STATUS_FG[o.status]||"#555";
-      var canReceipt = ["Confirmée","En livraison","Livrée","Reçue","Validée"].indexOf(o.status) !== -1;
+      var canReceipt = ["Confirmée","En livraison","Livrée","Terminée"].indexOf(o.status) !== -1;
       var flag = o.not_received_reported_at ? '<div class="mo-flag">⚠ Non-réception signalée — l\'administrateur a été notifié.</div>' : '';
       var receiptBtn = canReceipt
         ? '<a class="mo-btn mo-btn-ok" href="/api/orders/'+esc(o.id)+'/receipt.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">📄 Télécharger le reçu (PDF)</a>'
         : '<button class="mo-btn" type="button" disabled title="Disponible dès que la commande sera confirmée par l\'administrateur" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;">📄 Reçu PDF (en attente de confirmation)</button>';
 
-      // Reception buttons — disponibles dès que l'admin marque "En livraison" ou "Livrée"
-      // - "En livraison" : le client peut déjà confirmer qu'il a reçu (passe en "Reçue")
-      // - "Livrée" : 1ʳᵉ confirmation déjà donnée par l'admin, on attend celle du client
+      // Bouton de confirmation de réception : disponible UNIQUEMENT quand l'admin a
+      // marqué la commande « Livrée ». Une fois le client confirme, le statut bascule
+      // sur « Terminée ».
       var receptionButtons = "";
       var noticeBlock = "";
-      if(o.status === "En livraison" || o.status === "Livrée"){
-        if(o.status === "Livrée"){
-          noticeBlock = '<div class="mo-notice mo-notice-ok">✓ L\'administrateur a confirmé la livraison. En attente de votre confirmation de réception.</div>';
-        }
+      if(o.status === "Livrée"){
+        noticeBlock = '<div class="mo-notice mo-notice-ok">✓ L\'administrateur a confirmé la livraison. Confirmez la réception pour clôturer la commande (« Terminée »).</div>';
         receptionButtons =
-          '<button class="mo-btn mo-btn-ok" data-act="recv" data-id="'+esc(o.id)+'">✓ Valider la réception</button>'+
+          '<button class="mo-btn mo-btn-ok" data-act="recv" data-id="'+esc(o.id)+'">✓ J\'ai bien reçu la commande</button>'+
           '<button class="mo-btn mo-btn-warn" data-act="not" data-id="'+esc(o.id)+'">⚠ Signaler non reçu</button>';
-      } else if(["En attente","Confirmée"].indexOf(o.status) !== -1){
-        noticeBlock = '<div class="mo-notice">⏳ Veuillez patienter — vous pourrez confirmer la réception dès que l\'administrateur aura mis votre commande « En livraison ».</div>';
+      } else if(["En attente","Confirmée","En livraison"].indexOf(o.status) !== -1){
+        noticeBlock = '<div class="mo-notice">⏳ Veuillez patienter — vous pourrez confirmer la réception dès que l\'administrateur aura mis votre commande « Livrée ».</div>';
+      } else if(o.status === "Terminée"){
+        noticeBlock = '<div class="mo-notice mo-notice-ok">✓ Commande terminée — réception confirmée.</div>';
       }
 
       // Cancel block — visible while the cancel window is still open OR the order is still cancellable

@@ -259,27 +259,19 @@
     <form id="checkout-form" novalidate>
       <div class="modal-body">
         <div class="modal-err" id="checkout-err"></div>
-        <div class="field">
-          <label for="co-name">Nom complet *</label>
-          <input type="text" id="co-name" name="customer_name" maxlength="140" required>
-        </div>
-        <div class="field">
-          <label for="co-email">Email *</label>
-          <input type="email" id="co-email" name="customer_email" required>
-        </div>
-        <div class="field">
-          <label for="co-phone">Téléphone *</label>
-          <input type="tel" id="co-phone" name="customer_phone" placeholder="+242 …" required>
+        <div class="checkout-account" id="checkout-account" style="background:#fff7ed;border:1px solid #fed7aa;border-radius:12px;padding:14px;margin-bottom:14px;font-size:14px;color:#3f3f46;">
+          <div style="font-weight:700;color:#9a3412;margin-bottom:6px;">Vos coordonnées (compte)</div>
+          <div id="co-acc-name" style="margin-bottom:2px;"></div>
+          <div id="co-acc-email" style="margin-bottom:2px;color:#555;"></div>
+          <div id="co-acc-phone" style="color:#555;"></div>
+          <div id="co-acc-warning" style="display:none;margin-top:8px;padding:8px;background:#fee2e2;color:#b42318;border-radius:8px;font-size:13px;"></div>
         </div>
         <div class="field">
           <label for="co-zone">Zone de livraison *</label>
           <select id="co-zone" name="delivery_zone" required>
             <option value="">— Choisir une zone —</option>
           </select>
-        </div>
-        <div class="field">
-          <label for="co-address">Adresse précise *</label>
-          <textarea id="co-address" name="delivery_address" maxlength="260" required placeholder="Quartier, rue, point de repère…"></textarea>
+          <small style="display:block;margin-top:6px;color:#6b7280;">Seule la zone vous est demandée — vos autres informations sont récupérées dans votre compte.</small>
         </div>
       </div>
       <div class="modal-foot">
@@ -479,15 +471,28 @@ async function loadZones(){
 function openCheckout(){
   if(!CART.length){ showToast('Votre panier est vide', true); return; }
   const me = ME || {};
-  document.getElementById('co-name').value = me.name || me.username || '';
-  document.getElementById('co-email').value = me.email || '';
-  document.getElementById('co-phone').value = me.phone || '';
+  const name = me.name || me.username || '';
+  const email = me.email || '';
+  const phone = me.phone || '';
+  document.getElementById('co-acc-name').textContent = name ? ('👤 ' + name) : '';
+  document.getElementById('co-acc-email').textContent = email ? ('✉️ ' + email) : '';
+  document.getElementById('co-acc-phone').textContent = phone ? ('📞 ' + phone) : '';
+  const warn = document.getElementById('co-acc-warning');
+  const missing = [];
+  if(!name) missing.push('nom');
+  if(!email) missing.push('email');
+  if(!phone) missing.push('téléphone');
+  if(missing.length){
+    warn.style.display = 'block';
+    warn.innerHTML = '⚠ Profil incomplet : <a href="/parametres.html" style="color:#b42318;font-weight:700;">complétez votre ' + missing.join(', ') + '</a> avant de commander.';
+  } else {
+    warn.style.display = 'none';
+  }
   document.getElementById('co-zone').value = '';
-  document.getElementById('co-address').value = '';
   const err = document.getElementById('checkout-err');
   err.className = 'modal-err'; err.textContent = '';
   document.getElementById('checkout-modal').classList.add('show');
-  setTimeout(()=>document.getElementById('co-name').focus(), 80);
+  setTimeout(()=>document.getElementById('co-zone').focus(), 80);
 }
 
 function closeCheckout(){
@@ -500,14 +505,10 @@ async function submitCheckout(ev){
   const err = document.getElementById('checkout-err');
   err.className = 'modal-err'; err.textContent = '';
   const payload = {
-    customer_name: document.getElementById('co-name').value.trim(),
-    customer_email: document.getElementById('co-email').value.trim(),
-    customer_phone: document.getElementById('co-phone').value.trim(),
-    delivery_zone: document.getElementById('co-zone').value,
-    delivery_address: document.getElementById('co-address').value.trim()
+    delivery_zone: document.getElementById('co-zone').value
   };
-  if(!payload.customer_name || !payload.customer_email || !payload.customer_phone || !payload.delivery_zone || !payload.delivery_address){
-    err.className = 'modal-err show'; err.textContent = 'Tous les champs sont obligatoires.';
+  if(!payload.delivery_zone){
+    err.className = 'modal-err show'; err.textContent = 'Veuillez choisir une zone de livraison.';
     return;
   }
   btn.disabled = true;

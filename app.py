@@ -51,7 +51,7 @@ ADMIN_PASSWORD = "TAF1-FLEMME"
 ADMIN_PASSWORD_SUPER = "MMDE2007"
 ORDER_EMAIL_TO = "moussokiexauce7@gmail.com"
 CANCEL_WINDOW_MINUTES = 5
-ORDER_STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Annulée"]
+ORDER_STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Terminée", "Annulée"]
 ALLOWED_DELIVERY_ZONES = [
     "Potopoto la gare",
     "Total vers Saint Exupérie",
@@ -423,7 +423,9 @@ def init_db():
 
     conn.execute("UPDATE orders SET status = 'Confirmée' WHERE status IN ('validated', 'confirmed')")
     conn.execute("UPDATE orders SET status = 'Annulée' WHERE status = 'cancelled'")
-    conn.execute("UPDATE orders SET status = 'En attente' WHERE status NOT IN ('En attente', 'Confirmée', 'En livraison', 'Livrée', 'Annulée')")
+    # Migration : "Reçue" et "Validée" deviennent "Terminée" (statut final unifié après confirmation client)
+    conn.execute("UPDATE orders SET status = 'Terminée' WHERE status IN ('Reçue', 'Validée')")
+    conn.execute("UPDATE orders SET status = 'En attente' WHERE status NOT IN ('En attente', 'Confirmée', 'En livraison', 'Livrée', 'Terminée', 'Annulée')")
     conn.execute("UPDATE orders SET tracking_token = lower(hex(randomblob(16))) WHERE tracking_token IS NULL OR tracking_token = ''")
     conn.execute("UPDATE orders SET updated_at = created_at WHERE updated_at IS NULL OR updated_at = ''")
     conn.commit()
@@ -1246,17 +1248,27 @@ def create_order():
         return jsonify({"error": "Votre panier est vide."}), 400
     data = request.get_json(silent=True) or {}
     user = current_user()
+    if not user:
+        return jsonify({"error": "Connectez-vous à votre compte avant de passer commande."}), 401
     try:
-        customer_name = clean_text(data.get("customer_name") or (user or {}).get("name"), 140, True)
-        customer_email = clean_email(data.get("customer_email") or (user or {}).get("email"))
-        customer_phone = clean_phone(data.get("customer_phone"))
         delivery_zone = clean_text(data.get("delivery_zone"), 120, True)
-        delivery_address = clean_text(data.get("delivery_address"), 260, True)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
     if delivery_zone not in ALLOWED_DELIVERY_ZONES:
         return jsonify({"error": "Livraison impossible : cette adresse est hors zone. Zones autorisées : Potopoto la gare, Total vers Saint Exupérie, Présidence, OSH, CHU."}), 400
+
+    # Tous les autres champs (nom, email, téléphone) sont récupérés depuis le compte
+    # client. L'adresse précise reprend la zone choisie : aucune saisie supplémentaire
+    # n'est demandée à l'utilisateur lors de la commande.
+    customer_name = (user.get("name") or "").strip()
+    customer_email = (user.get("email") or "").strip()
+    customer_phone = (user.get("phone") or "").strip()
+    if not customer_name or not customer_email:
+        return jsonify({"error": "Profil incomplet : renseignez votre nom et votre email dans votre compte avant de commander."}), 400
+    if not customer_phone:
+        return jsonify({"error": "Profil incomplet : ajoutez un numéro de téléphone à votre compte avant de commander."}), 400
+    delivery_address = delivery_zone
 
     conn = get_db()
     valid_items = []
@@ -1362,18 +1374,18 @@ def mark_order_received(order_id):
     if order_data["status"] == "Annulée":
         conn.close()
         return jsonify({"error": "Cette commande a été annulée."}), 400
-    if order_data["status"] == "Reçue":
+    if order_data["status"] == "Terminée":
         conn.close()
         return jsonify({"error": "Réception déjà confirmée."}), 400
-    # RULE: client can confirm reception as soon as the administrator has put the order
-    # "En livraison" or "Livrée". Otherwise, ask the client to wait.
-    if order_data["status"] not in {"En livraison", "Livrée"}:
+    # RÈGLE : le client peut confirmer la réception dès que l'administrateur a marqué
+    # la commande « Livrée ». Le statut final passe alors à « Terminée ».
+    if order_data["status"] != "Livrée":
         conn.close()
-        return jsonify({"error": "Veuillez patienter — vous pourrez confirmer la réception dès que l'administrateur aura mis votre commande « En livraison »."}), 400
+        return jsonify({"error": "Veuillez patienter — vous pourrez confirmer la réception dès que l'administrateur aura mis votre commande « Livrée »."}), 400
     now = now_iso()
     conn.execute(
-        "UPDATE orders SET status = 'Reçue', client_received = 1, client_confirmed = 1, received_at = ?, updated_at = ? WHERE id = ?",
-        (now, now, order_id),
+        "UPDATE orders SET status = 'Terminée', client_received = 1, client_confirmed = 1, received_at = ?, validated_at = ?, updated_at = ? WHERE id = ?",
+        (now, now, now, order_id),
     )
     conn.commit()
     updated = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
@@ -1397,7 +1409,7 @@ def report_order_not_received(order_id):
     if order_data["status"] == "Annulée":
         conn.close()
         return jsonify({"error": "Cette commande a été annulée."}), 400
-    if order_data["status"] == "Reçue":
+    if order_data["status"] == "Terminée":
         conn.close()
         return jsonify({"error": "Cette commande a déjà été marquée reçue."}), 400
     payload = request.get_json(silent=True) or {}
@@ -1679,13 +1691,28 @@ def admin_get_orders():
 @app.route("/api/admin/orders/<int:order_id>/status", methods=["PUT", "POST"])
 @require_admin_api
 def admin_update_order_status(order_id):
-    """Met à jour le statut de suivi d'une commande."""
+    """Met à jour le statut de suivi d'une commande.
+
+    Quand l'admin passe la commande en « Livrée », on note la confirmation côté
+    administrateur (`admin_confirmed = 1`). Cela active la confirmation de
+    réception pour le client : dès qu'il confirme, le statut bascule sur « Terminée ».
+    """
     data = request.get_json(silent=True) or {}
     status = clean_text(data.get("status"), 40, True)
     if status not in ORDER_STATUSES:
-        return jsonify({"error": "Statut invalide. Utilisez : En attente, Confirmée, En livraison, Livrée."}), 400
+        return jsonify({"error": "Statut invalide. Utilisez : En attente, Confirmée, En livraison, Livrée, Terminée, Annulée."}), 400
     conn = get_db()
-    result = conn.execute("UPDATE orders SET status = ?, updated_at = ? WHERE id = ?", (status, now_iso(), order_id))
+    now = now_iso()
+    if status == "Livrée":
+        result = conn.execute(
+            "UPDATE orders SET status = ?, admin_confirmed = 1, updated_at = ? WHERE id = ?",
+            (status, now, order_id),
+        )
+    else:
+        result = conn.execute(
+            "UPDATE orders SET status = ?, updated_at = ? WHERE id = ?",
+            (status, now, order_id),
+        )
     conn.commit()
     if result.rowcount == 0:
         conn.close()

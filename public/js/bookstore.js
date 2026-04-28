@@ -331,8 +331,8 @@
           myOrdersSection.innerHTML += '<p style="color:#888;font-size:14px;">Vous n\'avez pas encore passé de commande.</p>';
           return;
         }
-        var statusColor = { "En attente":"#854d0e", "Confirmée":"#166534", "En livraison":"#1e40af", "Livrée":"#5b21b6", "Annulée":"#b42318", "Validée":"#065f46" };
-        var statusBg = { "En attente":"#fef9c3", "Confirmée":"#dcfce7", "En livraison":"#dbeafe", "Livrée":"#ede9fe", "Annulée":"#fee4e2", "Validée":"#d1fae5" };
+        var statusColor = { "En attente":"#854d0e", "Confirmée":"#166534", "En livraison":"#1e40af", "Livrée":"#5b21b6", "Annulée":"#b42318", "Terminée":"#065f46" };
+        var statusBg = { "En attente":"#fef9c3", "Confirmée":"#dcfce7", "En livraison":"#dbeafe", "Livrée":"#ede9fe", "Annulée":"#fee4e2", "Terminée":"#d1fae5" };
         orders.forEach(function (o) {
           var card = document.createElement("div");
           card.style.cssText = "border:1px solid #eee;border-radius:12px;padding:16px;margin-bottom:14px;background:#fafafa;";
@@ -343,7 +343,7 @@
               + (i.image ? '<img src="' + esc(i.image) + '" style="width:38px;height:50px;object-fit:cover;border-radius:5px;background:#eee;" onerror="this.style.display=\'none\'">' : '')
               + '<div style="flex:1;"><span style="font-weight:600;">' + esc(i.titre) + '</span><br><span style="color:#888;font-size:12px;">' + esc(i.auteur) + ' · ' + esc(i.qty) + ' ex. · ' + money(i.prix) + '</span></div></div>';
           }).join("");
-          var canConfirm = !o.client_confirmed && ["En livraison", "Livrée"].includes(o.status);
+          var canConfirm = !o.client_confirmed && o.status === "Livrée";
           card.innerHTML = '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px;gap:10px;">'
             + '<div><strong style="font-size:15px;">Commande #' + esc(o.id) + '</strong><div style="font-size:12px;color:#888;margin-top:3px;">' + fmtDate(o.created_at) + ' · ' + money(o.total) + '</div></div>'
             + '<span style="background:' + bg + ';color:' + col + ';padding:4px 12px;border-radius:999px;font-size:12px;font-weight:700;white-space:nowrap;">' + esc(o.status) + '</span>'
@@ -353,7 +353,7 @@
             + (o.client_confirmed ? '<div style="font-size:12px;padding:6px 12px;background:#dcfce7;color:#166534;border-radius:999px;display:inline-block;margin-bottom:8px;">✓ Vous avez confirmé la réception</div>' : '')
             + (canConfirm ? '<div><button class="confirm-btn" data-oid="' + o.id + '" style="background:#ff690c;color:#fff;border:0;border-radius:999px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;">Confirmer la réception</button><p style="font-size:11px;color:#888;margin-top:5px;">Confirmez que vous avez bien reçu votre commande. Cela validera définitivement la commande.</p></div>' : '')
             + (o.status === "Annulée" && o.cancelled_at ? '<div style="font-size:12px;color:#b42318;">Annulée le ' + fmtDate(o.cancelled_at) + '</div>' : '')
-            + (o.status === "Validée" && o.validated_at ? '<div style="font-size:12px;color:#065f46;margin-top:4px;">✅ Commande validée le ' + fmtDate(o.validated_at) + '</div>' : '');
+            + (o.status === "Terminée" && o.validated_at ? '<div style="font-size:12px;color:#065f46;margin-top:4px;">✅ Commande terminée le ' + fmtDate(o.validated_at) + '</div>' : '');
 
           myOrdersSection.appendChild(card);
         });
@@ -363,9 +363,9 @@
             var oid = btn.getAttribute("data-oid");
             btn.disabled = true;
             btn.textContent = "Envoi…";
-            post("/api/orders/" + oid + "/confirm-reception", {})
+            post("/api/orders/" + oid + "/mark-received", {})
               .then(function (updated) {
-                toast(updated.status === "Validée" ? "Réception confirmée — Commande validée !" : "Réception confirmée.");
+                toast(updated.status === "Terminée" ? "Réception confirmée — Commande terminée !" : "Réception confirmée.");
                 renderMyOrders();
               })
               .catch(function (e) { toast((e && e.error) || "Erreur lors de la confirmation.", "error"); btn.disabled = false; btn.textContent = "Confirmer la réception"; });
@@ -1260,6 +1260,60 @@
     if (page === "add") initLegacyAdd();
   }
 
+  /* ── SESSION WATCHDOG ──
+   * Si l'administrateur désactive ou supprime le compte d'un utilisateur
+   * pendant qu'il est en train de naviguer, on le déconnecte automatiquement
+   * et on le renvoie à la vitrine publique.
+   * Mécanisme : on retient en sessionStorage le fait que l'utilisateur était
+   * authentifié ; au prochain ping (toutes les 12s + à chaque chargement),
+   * si /api/auth/status indique qu'il ne l'est plus alors qu'il l'était, on
+   * affiche un message et on redirige vers /vitrine.html.
+   * Les pages publiques (vitrine, login, register, reset, à propos, conditions,
+   * confidentialité, admin) ne sont jamais redirigées. */
+  function isPublicPath() {
+    var p = (window.location.pathname || "").toLowerCase();
+    if (p === "/" || p === "" ) return false; // accueil = page protégée
+    return (
+      p.indexOf("vitrine") !== -1 ||
+      p.indexOf("login") !== -1 ||
+      p.indexOf("connexion") !== -1 ||
+      p.indexOf("register") !== -1 ||
+      p.indexOf("inscription") !== -1 ||
+      p.indexOf("reset-password") !== -1 ||
+      p.indexOf("a-propos") !== -1 ||
+      p.indexOf("conditions") !== -1 ||
+      p.indexOf("confidentialite") !== -1 ||
+      p.indexOf("admin") !== -1 ||
+      p.indexOf("super-admin") !== -1
+    );
+  }
+  function forceLogoutToVitrine() {
+    try { sessionStorage.removeItem("magma_was_auth"); } catch (e) {}
+    try {
+      alert("Votre compte a été désactivé ou supprimé par un administrateur. Vous allez être redirigé vers la vitrine.");
+    } catch (e) {}
+    window.location.href = "/vitrine.html";
+  }
+  function checkSessionAlive() {
+    fetch("/api/auth/status", { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (s) {
+        if (!s) return;
+        var isAuth = !!(s.user || s.admin);
+        var was = false;
+        try { was = sessionStorage.getItem("magma_was_auth") === "1"; } catch (e) {}
+        if (isAuth) {
+          try { sessionStorage.setItem("magma_was_auth", "1"); } catch (e) {}
+        } else if (was && !isPublicPath()) {
+          forceLogoutToVitrine();
+        }
+      })
+      .catch(function () {});
+  }
+
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
   else init();
+
+  checkSessionAlive();
+  setInterval(checkSessionAlive, 12000);
 })();

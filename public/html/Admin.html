@@ -141,7 +141,7 @@
     .status-livraison { background: #dbeafe; color: #1e40af; }
     .status-livree { background: #ede9fe; color: #5b21b6; }
     .status-annulee { background: #fee4e2; color: #b42318; }
-    .status-validee { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+    .status-terminee { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
     .order-meta { font-size: 13px; color: #555; margin-bottom: 8px; }
     .order-items-inline { font-size: 12px; color: #777; margin-bottom: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px; }
     .validation-pills { display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap; }
@@ -260,7 +260,7 @@
         <div class="stat-box" data-go="users" title="Voir les utilisateurs"><div class="stat-label">Utilisateurs</div><div class="stat-value" id="stat-users">—</div><div class="stat-sub">comptes clients</div></div>
         <div class="stat-box" data-go="orders" title="Voir les commandes"><div class="stat-label">Commandes</div><div class="stat-value" id="stat-orders">—</div><div class="stat-sub">au total</div></div>
         <div class="stat-box" data-go="orders" data-tab="active" title="Voir les commandes en cours"><div class="stat-label">En attente</div><div class="stat-value" id="stat-pending">—</div><div class="stat-sub">à traiter</div></div>
-        <div class="stat-box" data-go="orders" data-tab="validated" title="Voir les commandes validées"><div class="stat-label">Validées</div><div class="stat-value" id="stat-validated">—</div><div class="stat-sub">double confirmation</div></div>
+        <div class="stat-box" data-go="orders" data-tab="validated" title="Voir les commandes terminées"><div class="stat-label">Terminées</div><div class="stat-value" id="stat-validated">—</div><div class="stat-sub">livraison confirmée</div></div>
       </div>
       <div class="card">
         <h3>Dernières commandes</h3>
@@ -362,7 +362,7 @@
       <div class="tab-bar" id="orders-tab-bar">
         <button class="tab-btn active" data-tab="all">Toutes <span class="tab-count" id="tc-all">0</span></button>
         <button class="tab-btn" data-tab="active">En cours <span class="tab-count" id="tc-active">0</span></button>
-        <button class="tab-btn" data-tab="validated">Validées <span class="tab-count" id="tc-validated">0</span></button>
+        <button class="tab-btn" data-tab="validated">Terminées <span class="tab-count" id="tc-validated">0</span></button>
         <button class="tab-btn" data-tab="cancelled">Annulées <span class="tab-count" id="tc-cancelled">0</span></button>
       </div>
       <div id="orders-list">Chargement…</div>
@@ -438,7 +438,7 @@
   }
 
   function statusClass(s) {
-    var map = { "En attente":"status-attente", "Confirmée":"status-confirmee", "En livraison":"status-livraison", "Livrée":"status-livree", "Annulée":"status-annulee", "Validée":"status-validee" };
+    var map = { "En attente":"status-attente", "Confirmée":"status-confirmee", "En livraison":"status-livraison", "Livrée":"status-livree", "Annulée":"status-annulee", "Terminée":"status-terminee" };
     return map[s] || "";
   }
 
@@ -524,7 +524,7 @@
     get("/api/admin/orders").then(function (orders) {
       document.getElementById("stat-orders").textContent = orders.length;
       document.getElementById("stat-pending").textContent = orders.filter(function (o) { return o.status === "En attente"; }).length;
-      document.getElementById("stat-validated").textContent = orders.filter(function (o) { return o.status === "Validée"; }).length;
+      document.getElementById("stat-validated").textContent = orders.filter(function (o) { return o.status === "Terminée"; }).length;
       var recent = orders.slice(0, 5);
       document.getElementById("dashboard-orders").innerHTML = recent.length === 0
         ? '<p style="color:#999;font-size:13px;">Aucune commande.</p>'
@@ -789,7 +789,7 @@
   /* ── ORDERS ── */
   var _orders = [];
   var _orderTab = "all";
-  var STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Annulée"];
+  var STATUSES = ["En attente", "Confirmée", "En livraison", "Livrée", "Terminée", "Annulée"];
 
   document.getElementById("orders-refresh-btn").addEventListener("click", loadOrders);
 
@@ -804,7 +804,7 @@
 
   function filteredOrders() {
     if (_orderTab === "active") return _orders.filter(function (o) { return ["En attente", "Confirmée", "En livraison", "Livrée"].includes(o.status); });
-    if (_orderTab === "validated") return _orders.filter(function (o) { return o.status === "Validée"; });
+    if (_orderTab === "validated") return _orders.filter(function (o) { return o.status === "Terminée"; });
     if (_orderTab === "cancelled") return _orders.filter(function (o) { return o.status === "Annulée"; });
     return _orders;
   }
@@ -814,7 +814,7 @@
     var filtered = filteredOrders();
     document.getElementById("tc-all").textContent = _orders.length;
     document.getElementById("tc-active").textContent = _orders.filter(function (o) { return ["En attente", "Confirmée", "En livraison", "Livrée"].includes(o.status); }).length;
-    document.getElementById("tc-validated").textContent = _orders.filter(function (o) { return o.status === "Validée"; }).length;
+    document.getElementById("tc-validated").textContent = _orders.filter(function (o) { return o.status === "Terminée"; }).length;
     document.getElementById("tc-cancelled").textContent = _orders.filter(function (o) { return o.status === "Annulée"; }).length;
 
     if (filtered.length === 0) { list.innerHTML = '<div class="card"><p style="color:#999;font-size:13px;">Aucune commande dans cette catégorie.</p></div>'; return; }
@@ -826,10 +826,10 @@
         + '<div class="order-header"><div class="order-id">Commande #' + esc(o.id) + ' — ' + esc(o.customer_name) + '</div><span class="order-status ' + statusClass(o.status) + '">' + esc(o.status) + '</span></div>'
         + '<div class="order-meta">📧 ' + esc(o.customer_email) + ' · 📞 ' + esc(o.customer_phone || "—") + ' · 📍 ' + esc(o.delivery_zone) + ' · <strong>' + money(o.total) + '</strong></div>'
         + (itemsText ? '<div class="order-items-inline">🛒 ' + itemsText + '</div>' : '')
-        + '<div class="validation-pills">' + adminPill + clientPill + (o.validated_at ? '<span class="v-pill v-done">✓ Validée le ' + fmtDateShort(o.validated_at) + '</span>' : '') + '</div>'
+        + '<div class="validation-pills">' + adminPill + clientPill + (o.validated_at ? '<span class="v-pill v-done">✓ Terminée le ' + fmtDateShort(o.validated_at) + '</span>' : '') + '</div>'
         + '<div class="order-footer">'
         + '<button class="btn btn-info btn-sm" data-detail="' + o.id + '">Voir détails</button>'
-        + (o.status !== "Annulée" && o.status !== "Validée" ? '<button class="btn btn-primary btn-sm" data-status-btn="' + o.id + '">Statut</button>' : '')
+        + (o.status !== "Annulée" && o.status !== "Terminée" ? '<button class="btn btn-primary btn-sm" data-status-btn="' + o.id + '">Statut</button>' : '')
         + '</div>'
         + '</div>';
     }).join("");
@@ -873,14 +873,14 @@
       + '<div class="modal-field"><div class="modal-field-label">Total</div><div class="modal-field-value" style="font-size:20px;font-weight:700;color:#ff690c;">' + money(o.total) + '</div></div>'
       + '<div class="modal-field"><div class="modal-field-label">Passée le</div><div class="modal-field-value">' + fmtDate(o.created_at) + '</div></div>'
       + (o.updated_at && o.updated_at !== o.created_at ? '<div class="modal-field"><div class="modal-field-label">Mise à jour</div><div class="modal-field-value">' + fmtDate(o.updated_at) + '</div></div>' : '')
-      + (o.validated_at ? '<div class="modal-field"><div class="modal-field-label">Validée le</div><div class="modal-field-value">' + fmtDate(o.validated_at) + '</div></div>' : '')
+      + (o.validated_at ? '<div class="modal-field"><div class="modal-field-label">Terminée le</div><div class="modal-field-value">' + fmtDate(o.validated_at) + '</div></div>' : '')
       + '</div>'
       + '<div class="modal-section"><h4>Double validation</h4>'
       + '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">'
       + '<span class="v-pill ' + (o.admin_confirmed ? "v-done" : "v-pending") + '" style="padding:4px 12px;font-size:13px;">' + (o.admin_confirmed ? "✓ Admin a confirmé la livraison" : "◯ En attente confirmation admin") + '</span>'
       + '<span class="v-pill ' + (o.client_confirmed ? "v-done" : "v-pending") + '" style="padding:4px 12px;font-size:13px;">' + (o.client_confirmed ? "✓ Client a confirmé la réception" : "◯ En attente confirmation client") + '</span>'
       + '</div>'
-      + (o.status !== "Annulée" && o.status !== "Validée" ? '<div class="modal-status-row"><select id="modal-status-sel">' + STATUSES.map(function (s) { return '<option value="' + s + '"' + (o.status === s ? " selected" : "") + '>' + s + '</option>'; }).join("") + '</select><button class="btn btn-primary" id="modal-status-update">Mettre à jour</button></div>' : '')
+      + (o.status !== "Annulée" && o.status !== "Terminée" ? '<div class="modal-status-row"><select id="modal-status-sel">' + STATUSES.map(function (s) { return '<option value="' + s + '"' + (o.status === s ? " selected" : "") + '>' + s + '</option>'; }).join("") + '</select><button class="btn btn-primary" id="modal-status-update">Mettre à jour</button></div>' : '')
       + '</div>';
 
     openModal("Commande #" + o.id + " — " + o.customer_name, html);
@@ -891,7 +891,7 @@
         var s = document.getElementById("modal-status-sel").value;
         put("/api/admin/orders/" + o.id + "/status", { status: s })
           .then(function (updated) {
-            toast("Statut mis à jour" + (updated.status === "Validée" ? " — Commande validée !" : "."));
+            toast("Statut mis à jour" + (updated.status === "Terminée" ? " — Commande terminée !" : "."));
             closeModal();
             loadOrders();
           })
@@ -904,14 +904,14 @@
     openModal("Changer le statut — Commande #" + o.id,
       '<div class="modal-field"><div class="modal-field-label">Client</div><div class="modal-field-value">' + esc(o.customer_name) + '</div></div>'
       + '<div class="modal-field"><div class="modal-field-label">Statut actuel</div><div class="modal-field-value"><span class="order-status ' + statusClass(o.status) + '">' + esc(o.status) + '</span></div></div>'
-      + '<p style="font-size:13px;color:#888;margin-bottom:12px;">Marquer "Livrée" indiquera que l\'admin a confirmé la livraison. Si le client confirme aussi la réception, la commande passera automatiquement en "Validée".</p>'
+      + '<p style="font-size:13px;color:#888;margin-bottom:12px;">Marquer "Livrée" active la confirmation côté client : dès qu\'il valide la réception, la commande passera automatiquement en "Terminée".</p>'
       + '<div class="modal-status-row"><select id="status-modal-sel">' + STATUSES.map(function (s) { return '<option value="' + s + '"' + (o.status === s ? " selected" : "") + '>' + s + '</option>'; }).join("") + '</select><button class="btn btn-primary" id="status-modal-apply">Appliquer</button></div>'
     );
     document.getElementById("status-modal-apply").addEventListener("click", function () {
       var s = document.getElementById("status-modal-sel").value;
       put("/api/admin/orders/" + o.id + "/status", { status: s })
         .then(function (updated) {
-          toast("Statut mis à jour" + (updated.status === "Validée" ? " — Commande validée !" : "."));
+          toast("Statut mis à jour" + (updated.status === "Terminée" ? " — Commande terminée !" : "."));
           closeModal();
           loadOrders();
         })
