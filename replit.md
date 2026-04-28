@@ -104,6 +104,15 @@ Ou avec nodemon pour le rechargement automatique en développement :
 npx nodemon server.js
 ```
 
+## Réception des commandes (règle métier)
+- Le bouton « Valider la réception » sur `mes-commandes.html` n'apparaît que lorsque l'administrateur a passé la commande au statut **« Livrée »**.
+- Tant que le statut est « En attente », « Confirmée » ou « En livraison », un bouton désactivé explique au client qu'il faut attendre la livraison.
+- Routes appliquant la règle (côté Flask `app.py` ET côté Node `src/routes/orders.js`) : `POST /api/orders/<id>/mark-received` (refusé si `status !== "Livrée"`) et `POST /api/orders/<id>/report-not-received`.
+- Colonnes orders ajoutées : `admin_confirmed`, `client_confirmed`, `client_received`, `received_at`, `not_received_reported_at`, `not_received_reason`, `validated_at`.
+
+## Compteur d'annulation côté client
+- Toute commande renvoie maintenant `cancel_until` (ISO) ; sur `mes-commandes.html` un bandeau orange affiche en direct « Annulation possible pendant encore mm:ss » avec un bouton « Annuler la commande » tant que la fenêtre de 5 min (CANCEL_WINDOW_MINUTES) n'est pas écoulée. Au-delà, le bandeau passe en gris « Délai d'annulation expiré ».
+
 ## Layout WEBDEV — règles importantes
 - Ne JAMAIS toucher au `margin-top` de `.pos45` (valeur fixée à 211px — positionne la section orange sous les catégories).
 - Ne jamais modifier les couleurs ni le layout WEBDEV exporté.

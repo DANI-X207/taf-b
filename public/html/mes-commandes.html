@@ -63,6 +63,10 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
 .mo-btn-warn:hover { background:#fee4e2; }
 .mo-btn:disabled { opacity:.55; cursor:not-allowed; }
 .mo-flag { display:inline-block; margin-top:8px; font-size:.78rem; color:#b42318; font-weight:600; }
+.mo-countdown { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 14px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:10px; font-size:.85rem; font-weight:600; flex-wrap:wrap; }
+.mo-countdown.cd-expired { background:#f3f4f6; border-color:#e5e7eb; color:#6b7280; }
+.mo-countdown svg { stroke:currentColor; }
+.mo-countdown .cd-label { flex:1; min-width:200px; }
 </style>
 </head>
 <body>
@@ -123,27 +127,86 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
   var STATUS_BG={"En attente":"#fef9c3","Confirmée":"#dcfce7","En livraison":"#dbeafe","Livrée":"#ede9fe","Annulée":"#fee4e2","Validée":"#d1fae5","Reçue":"#cffafe"};
   var STATUS_FG={"En attente":"#854d0e","Confirmée":"#166534","En livraison":"#1e40af","Livrée":"#5b21b6","Annulée":"#b42318","Validée":"#065f46","Reçue":"#0e7490"};
   var allOrders=[]; var currentFilter="all";
+  // Live countdown state — updated every second by tickCountdowns()
+  var countdownTimer = null;
+  function fmtRemaining(ms){
+    if(ms<=0) return "expiré";
+    var s = Math.floor(ms/1000);
+    var m = Math.floor(s/60); s = s%60;
+    return (m<10?"0"+m:m)+":"+(s<10?"0"+s:s);
+  }
+  function tickCountdowns(){
+    var nodes = document.querySelectorAll("[data-cancel-until]");
+    if(!nodes.length){ if(countdownTimer){ clearInterval(countdownTimer); countdownTimer=null; } return; }
+    var now = Date.now();
+    nodes.forEach(function(node){
+      var ts = node.getAttribute("data-cancel-until");
+      var deadline = new Date(ts.indexOf("T")!==-1?ts:ts+"Z").getTime();
+      var remaining = deadline - now;
+      var label = node.querySelector(".cd-label");
+      var btn = document.querySelector('button[data-act="cancel"][data-id="'+node.getAttribute("data-order-id")+'"]');
+      if(remaining<=0){
+        if(label) label.textContent = "Délai d'annulation expiré";
+        node.classList.add("cd-expired");
+        if(btn){ btn.disabled = true; btn.style.opacity = ".5"; btn.style.cursor = "not-allowed"; }
+      } else {
+        if(label) label.textContent = "Annulation possible pendant encore "+fmtRemaining(remaining);
+      }
+    });
+  }
+  function startCountdownTimer(){
+    if(countdownTimer) return;
+    countdownTimer = setInterval(tickCountdowns, 1000);
+    tickCountdowns();
+  }
+
   function render(){
     var list=document.getElementById("mo-list");
     var filtered=currentFilter==="all"?allOrders:allOrders.filter(function(o){return (o.status||"")===currentFilter || (currentFilter==="Validée" && (o.status==="Confirmée"||o.status==="Livrée"||o.status==="Validée"));});
     if(!filtered.length){list.innerHTML='<p class="mo-empty">Aucune commande dans cette catégorie.</p>';return;}
     list.innerHTML=filtered.map(function(o){
       var bg=STATUS_BG[o.status]||"#f3f4f6"; var fg=STATUS_FG[o.status]||"#555";
-      var canAct = o.status!=="Reçue" && o.status!=="Annulée";
       var canReceipt = ["Confirmée","En livraison","Livrée","Reçue","Validée"].indexOf(o.status) !== -1;
       var flag = o.not_received_reported_at ? '<div class="mo-flag">⚠ Non-réception signalée — l\'administrateur a été notifié.</div>' : '';
       var receiptBtn = canReceipt
         ? '<a class="mo-btn mo-btn-ok" href="/api/orders/'+esc(o.id)+'/receipt.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">📄 Télécharger le reçu (PDF)</a>'
         : '<button class="mo-btn" type="button" disabled title="Disponible dès que la commande sera confirmée par l\'administrateur" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;">📄 Reçu PDF (en attente de confirmation)</button>';
-      var actions = (canAct ? (
-        '<div class="mo-actions">'+
-          receiptBtn +
+
+      // Reception buttons — UNIQUEMENT lorsque l'admin a marqué la commande "Livrée"
+      var receptionButtons = "";
+      if(o.status === "Livrée"){
+        receptionButtons =
           '<button class="mo-btn mo-btn-ok" data-act="recv" data-id="'+esc(o.id)+'">✓ Valider la réception</button>'+
-          '<button class="mo-btn mo-btn-warn" data-act="not" data-id="'+esc(o.id)+'">⚠ Signaler non reçu</button>'+
-        '</div>'
-      ) : (
-        '<div class="mo-actions">'+ receiptBtn +'</div>'
-      ));
+          '<button class="mo-btn mo-btn-warn" data-act="not" data-id="'+esc(o.id)+'">⚠ Signaler non reçu</button>';
+      } else if(["En attente","Confirmée","En livraison"].indexOf(o.status) !== -1){
+        receptionButtons =
+          '<button class="mo-btn" type="button" disabled title="Vous pourrez confirmer la réception une fois que l\'administrateur aura marqué la commande comme « Livrée »." style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;">✓ Valider la réception (en attente de livraison)</button>';
+      }
+
+      // Cancel block — visible while the cancel window is still open OR the order is still cancellable
+      var cancelBlock = "";
+      if(o.cancel_until && (o.status === "En attente" || o.status === "Confirmée")){
+        var dl = new Date((o.cancel_until.indexOf("T")!==-1?o.cancel_until:o.cancel_until+"Z")).getTime();
+        var remaining = dl - Date.now();
+        if(remaining > 0){
+          cancelBlock =
+            '<div class="mo-countdown" data-order-id="'+esc(o.id)+'" data-cancel-until="'+esc(o.cancel_until)+'">'+
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+
+              '<span class="cd-label">Annulation possible pendant encore '+fmtRemaining(remaining)+'</span>'+
+              '<button class="mo-btn mo-btn-warn" data-act="cancel" data-id="'+esc(o.id)+'" style="margin-left:auto">Annuler la commande</button>'+
+            '</div>';
+        } else {
+          cancelBlock =
+            '<div class="mo-countdown cd-expired" data-order-id="'+esc(o.id)+'">'+
+              '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+
+              '<span class="cd-label">Délai d\'annulation expiré</span>'+
+            '</div>';
+        }
+      }
+
+      var actionsInner = receiptBtn + receptionButtons;
+      var actions = '<div class="mo-actions">'+ actionsInner +'</div>';
+
       return '<div class="mo-item" data-order="'+esc(o.id)+'">'+
         '<div class="mo-row">'+
           '<div><div class="mo-id">Commande #'+esc(o.id)+'</div><div class="mo-date">'+esc(fmtDate(o.created_at))+'</div></div>'+
@@ -156,12 +219,13 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
           '<div class="mo-detail"><b>Zone de livraison</b><span>'+esc(o.delivery_zone||"—")+'</span></div>'+
           '<div class="mo-detail"><b>Statut</b><span>'+esc(o.status)+'</span></div>'+
         '</div>'+
-        flag + actions +
+        cancelBlock + flag + actions +
       '</div>';
     }).join("");
-    list.querySelectorAll(".mo-btn").forEach(function(btn){
-      btn.addEventListener("click", function(){ handleAction(btn); });
+    list.querySelectorAll(".mo-btn:not([disabled])").forEach(function(btn){
+      if(btn.tagName==="BUTTON"){ btn.addEventListener("click", function(){ handleAction(btn); }); }
     });
+    startCountdownTimer();
   }
   function handleAction(btn){
     var id = btn.getAttribute("data-id"); var act = btn.getAttribute("data-act");
@@ -179,6 +243,13 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
       fetch("/api/orders/"+id+"/report-not-received",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({reason:reason})})
         .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
         .then(function(x){ if(!x.ok) throw new Error(x.j.error||"Erreur"); reload("⚠ Signalement envoyé à l'administrateur."); })
+        .catch(function(e){ alert(e.message); btn.disabled=false; });
+    } else if(act==="cancel"){
+      if(!confirm("Voulez-vous vraiment annuler la commande #"+id+" ? Cette action est irréversible.")) return;
+      btn.disabled=true;
+      fetch("/api/orders/"+id+"/cancel",{method:"POST",headers:{"Content-Type":"application/json"}})
+        .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j};});})
+        .then(function(x){ if(!x.ok) throw new Error(x.j.error||"Annulation impossible"); reload("✓ Commande annulée."); })
         .catch(function(e){ alert(e.message); btn.disabled=false; });
     }
   }

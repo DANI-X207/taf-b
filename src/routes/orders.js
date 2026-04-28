@@ -18,6 +18,8 @@ function rowToOrder(row, items = []) {
   const created = new Date(row.created_at + "Z");
   const deadline = new Date(created.getTime() + CANCEL_WINDOW_MINUTES * 60 * 1000);
   order.can_cancel = ["En attente", "Confirmée"].includes(row.status) && new Date() <= deadline;
+  // Always expose the cancellation deadline so the client can render a live countdown
+  order.cancel_until = deadline.toISOString().replace(/\.\d{3}Z$/, "");
   order.tracking_steps = ORDER_STATUSES.slice(0, -1);
   return order;
 }
@@ -258,6 +260,10 @@ router.post("/api/orders/:id/mark-received", requireUser(), async (req, res) => 
     if (!(await userCanAccessOrder(req, order))) return res.status(403).json({ error: "Accès à cette commande refusé." });
     if (order.status === "Annulée") return res.status(400).json({ error: "Cette commande a été annulée." });
     if (order.status === "Reçue") return res.status(400).json({ error: "Réception déjà confirmée." });
+    // NEW RULE: only allowed once the administrator has marked the order as "Livrée"
+    if (order.status !== "Livrée") {
+      return res.status(400).json({ error: "Vous pourrez confirmer la réception une fois que l'administrateur aura marqué la commande comme « Livrée »." });
+    }
     const now = nowIso();
     await db.run("UPDATE orders SET status = 'Reçue', client_received = 1, client_confirmed = 1, received_at = ?, updated_at = ? WHERE id = ?", now, now, orderId);
     const updated = await db.get("SELECT * FROM orders WHERE id = ?", orderId);

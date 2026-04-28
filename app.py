@@ -301,6 +301,13 @@ def init_db():
     add_column_if_missing(conn, "orders", "user_id", "INTEGER REFERENCES users(id)")
     add_column_if_missing(conn, "orders", "tracking_token", "TEXT DEFAULT ''")
     add_column_if_missing(conn, "orders", "updated_at", "TEXT DEFAULT ''")
+    add_column_if_missing(conn, "orders", "admin_confirmed", "INTEGER DEFAULT 0")
+    add_column_if_missing(conn, "orders", "client_confirmed", "INTEGER DEFAULT 0")
+    add_column_if_missing(conn, "orders", "client_received", "INTEGER DEFAULT 0")
+    add_column_if_missing(conn, "orders", "received_at", "TEXT")
+    add_column_if_missing(conn, "orders", "not_received_reported_at", "TEXT")
+    add_column_if_missing(conn, "orders", "not_received_reason", "TEXT DEFAULT ''")
+    add_column_if_missing(conn, "orders", "validated_at", "TEXT")
     add_column_if_missing(conn, "users", "is_active", "INTEGER NOT NULL DEFAULT 1")
     add_column_if_missing(conn, "users", "phone", "TEXT DEFAULT ''")
     conn.execute("""
@@ -629,7 +636,10 @@ def row_to_order(row, items=None):
     """Transforme une commande SQLite en réponse API incluant le suivi en temps réel."""
     order = dict(row)
     order["items"] = items or []
-    order["can_cancel"] = order["status"] in {"En attente", "Confirmée"} and datetime.utcnow() <= parse_iso(order["created_at"]) + timedelta(minutes=CANCEL_WINDOW_MINUTES)
+    deadline = parse_iso(order["created_at"]) + timedelta(minutes=CANCEL_WINDOW_MINUTES)
+    order["can_cancel"] = order["status"] in {"En attente", "Confirmée"} and datetime.utcnow() <= deadline
+    # Always expose the cancellation deadline so the client can render a live countdown
+    order["cancel_until"] = deadline.isoformat(timespec="seconds")
     order["tracking_steps"] = ORDER_STATUSES[:-1]
     return order
 
@@ -1335,6 +1345,80 @@ def cancel_order(order_id):
     conn.commit()
     conn.close()
     return jsonify({"success": True, "status": "Annulée"})
+
+
+@app.route("/api/orders/<int:order_id>/mark-received", methods=["POST"])
+def mark_order_received(order_id):
+    """Le client confirme avoir reçu sa commande — autorisé uniquement si l'admin l'a marquée 'Livrée'."""
+    conn = get_db()
+    order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({"error": "Commande non trouvée"}), 404
+    if not user_can_access_order(order):
+        conn.close()
+        return jsonify({"error": "Accès à cette commande refusé."}), 403
+    order_data = dict(order)
+    if order_data["status"] == "Annulée":
+        conn.close()
+        return jsonify({"error": "Cette commande a été annulée."}), 400
+    if order_data["status"] == "Reçue":
+        conn.close()
+        return jsonify({"error": "Réception déjà confirmée."}), 400
+    # NEW RULE: only allowed once the administrator has marked the order as "Livrée"
+    if order_data["status"] != "Livrée":
+        conn.close()
+        return jsonify({"error": "Vous pourrez confirmer la réception une fois que l'administrateur aura marqué la commande comme « Livrée »."}), 400
+    now = now_iso()
+    conn.execute(
+        "UPDATE orders SET status = 'Reçue', client_received = 1, client_confirmed = 1, received_at = ?, updated_at = ? WHERE id = ?",
+        (now, now, order_id),
+    )
+    conn.commit()
+    updated = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    items = [dict(row) for row in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,)).fetchall()]
+    conn.close()
+    return jsonify(row_to_order(updated, items))
+
+
+@app.route("/api/orders/<int:order_id>/report-not-received", methods=["POST"])
+def report_order_not_received(order_id):
+    """Le client signale qu'il n'a pas reçu sa commande ; l'administrateur est notifié."""
+    conn = get_db()
+    order = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    if not order:
+        conn.close()
+        return jsonify({"error": "Commande non trouvée"}), 404
+    if not user_can_access_order(order):
+        conn.close()
+        return jsonify({"error": "Accès à cette commande refusé."}), 403
+    order_data = dict(order)
+    if order_data["status"] == "Annulée":
+        conn.close()
+        return jsonify({"error": "Cette commande a été annulée."}), 400
+    if order_data["status"] == "Reçue":
+        conn.close()
+        return jsonify({"error": "Cette commande a déjà été marquée reçue."}), 400
+    payload = request.get_json(silent=True) or {}
+    reason = clean_text(payload.get("reason") or "Non précisé", 500, True)
+    now = now_iso()
+    conn.execute(
+        "UPDATE orders SET not_received_reported_at = ?, not_received_reason = ?, updated_at = ? WHERE id = ?",
+        (now, reason, now, order_id),
+    )
+    conn.commit()
+    updated = conn.execute("SELECT * FROM orders WHERE id = ?", (order_id,)).fetchone()
+    items = [dict(row) for row in conn.execute("SELECT * FROM order_items WHERE order_id = ?", (order_id,)).fetchall()]
+    conn.close()
+    try:
+        smtp_host = os.environ.get("SMTP_HOST")
+        if smtp_host:
+            send_order_email(dict(updated), items)
+        else:
+            app.logger.warning(f"[ADMIN-NOTIFY] Commande #{order_id} signalée non reçue — raison: {reason}")
+    except Exception as exc:
+        app.logger.error(f"Notification admin échouée: {exc}")
+    return jsonify(row_to_order(updated, items))
 
 
 @app.route("/api/orders/<int:order_id>/receipt.pdf", methods=["GET"])
