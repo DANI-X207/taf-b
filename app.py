@@ -1365,10 +1365,11 @@ def mark_order_received(order_id):
     if order_data["status"] == "Reçue":
         conn.close()
         return jsonify({"error": "Réception déjà confirmée."}), 400
-    # NEW RULE: only allowed once the administrator has marked the order as "Livrée"
-    if order_data["status"] != "Livrée":
+    # RULE: client can confirm reception as soon as the administrator has put the order
+    # "En livraison" or "Livrée". Otherwise, ask the client to wait.
+    if order_data["status"] not in {"En livraison", "Livrée"}:
         conn.close()
-        return jsonify({"error": "Vous pourrez confirmer la réception une fois que l'administrateur aura marqué la commande comme « Livrée »."}), 400
+        return jsonify({"error": "Veuillez patienter — vous pourrez confirmer la réception dès que l'administrateur aura mis votre commande « En livraison »."}), 400
     now = now_iso()
     conn.execute(
         "UPDATE orders SET status = 'Reçue', client_received = 1, client_confirmed = 1, received_at = ?, updated_at = ? WHERE id = ?",

@@ -260,9 +260,10 @@ router.post("/api/orders/:id/mark-received", requireUser(), async (req, res) => 
     if (!(await userCanAccessOrder(req, order))) return res.status(403).json({ error: "Accès à cette commande refusé." });
     if (order.status === "Annulée") return res.status(400).json({ error: "Cette commande a été annulée." });
     if (order.status === "Reçue") return res.status(400).json({ error: "Réception déjà confirmée." });
-    // NEW RULE: only allowed once the administrator has marked the order as "Livrée"
-    if (order.status !== "Livrée") {
-      return res.status(400).json({ error: "Vous pourrez confirmer la réception une fois que l'administrateur aura marqué la commande comme « Livrée »." });
+    // RULE: client can confirm reception as soon as the administrator has put the order
+    // "En livraison" or "Livrée". Otherwise, ask the client to wait.
+    if (!["En livraison", "Livrée"].includes(order.status)) {
+      return res.status(400).json({ error: "Veuillez patienter — vous pourrez confirmer la réception dès que l'administrateur aura mis votre commande « En livraison »." });
     }
     const now = nowIso();
     await db.run("UPDATE orders SET status = 'Reçue', client_received = 1, client_confirmed = 1, received_at = ?, updated_at = ? WHERE id = ?", now, now, orderId);

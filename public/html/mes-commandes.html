@@ -66,7 +66,9 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
 .mo-countdown { display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 14px; background:#fff7ed; border:1px solid #fed7aa; color:#9a3412; border-radius:10px; font-size:.85rem; font-weight:600; flex-wrap:wrap; }
 .mo-countdown.cd-expired { background:#f3f4f6; border-color:#e5e7eb; color:#6b7280; }
 .mo-countdown svg { stroke:currentColor; }
-.mo-countdown .cd-label { flex:1; min-width:200px; }
+.mo-countdown .cd-label { flex:1; min-width:200px; font-variant-numeric:tabular-nums; }
+.mo-notice { margin-top:10px; padding:10px 14px; background:#f1f5f9; border:1px solid #cbd5e1; color:#475569; border-radius:10px; font-size:.85rem; font-weight:500; }
+.mo-notice-ok { background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
 </style>
 </head>
 <body>
@@ -123,7 +125,14 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
 (function() {
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
   function money(v){return Number(v||0).toLocaleString("fr-FR")+" FCFA";}
-  function fmtDate(s){if(!s)return"—";var d=new Date(s.indexOf("T")!==-1?s:s+"Z");return isNaN(d)?s:d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}
+  // Parse a server timestamp as UTC even when the trailing Z is missing (Flask isoformat returns no tz suffix).
+  function parseServerDate(s){
+    if(!s) return null;
+    if(/[Zz]$|[+-]\d{2}:?\d{2}$/.test(s)) return new Date(s);
+    if(s.indexOf("T")===-1) return new Date(s.replace(" ","T")+"Z");
+    return new Date(s+"Z");
+  }
+  function fmtDate(s){if(!s)return"—";var d=parseServerDate(s);return (!d||isNaN(d))?s:d.toLocaleDateString("fr-FR",{day:"2-digit",month:"2-digit",year:"numeric",hour:"2-digit",minute:"2-digit"});}
   var STATUS_BG={"En attente":"#fef9c3","Confirmée":"#dcfce7","En livraison":"#dbeafe","Livrée":"#ede9fe","Annulée":"#fee4e2","Validée":"#d1fae5","Reçue":"#cffafe"};
   var STATUS_FG={"En attente":"#854d0e","Confirmée":"#166534","En livraison":"#1e40af","Livrée":"#5b21b6","Annulée":"#b42318","Validée":"#065f46","Reçue":"#0e7490"};
   var allOrders=[]; var currentFilter="all";
@@ -141,16 +150,17 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
     var now = Date.now();
     nodes.forEach(function(node){
       var ts = node.getAttribute("data-cancel-until");
-      var deadline = new Date(ts.indexOf("T")!==-1?ts:ts+"Z").getTime();
+      var d = parseServerDate(ts);
+      var deadline = d ? d.getTime() : 0;
       var remaining = deadline - now;
       var label = node.querySelector(".cd-label");
       var btn = document.querySelector('button[data-act="cancel"][data-id="'+node.getAttribute("data-order-id")+'"]');
       if(remaining<=0){
         if(label) label.textContent = "Délai d'annulation expiré";
         node.classList.add("cd-expired");
-        if(btn){ btn.disabled = true; btn.style.opacity = ".5"; btn.style.cursor = "not-allowed"; }
+        if(btn){ btn.disabled = true; btn.style.opacity = ".5"; btn.style.cursor = "not-allowed"; btn.style.pointerEvents="none"; }
       } else {
-        if(label) label.textContent = "Annulation possible pendant encore "+fmtRemaining(remaining);
+        if(label) label.textContent = "Chronomètre — annulation possible pendant encore " + fmtRemaining(remaining);
       }
     });
   }
@@ -172,27 +182,33 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
         ? '<a class="mo-btn mo-btn-ok" href="/api/orders/'+esc(o.id)+'/receipt.pdf" target="_blank" rel="noopener" style="text-decoration:none;display:inline-flex;align-items:center;gap:6px;">📄 Télécharger le reçu (PDF)</a>'
         : '<button class="mo-btn" type="button" disabled title="Disponible dès que la commande sera confirmée par l\'administrateur" style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;">📄 Reçu PDF (en attente de confirmation)</button>';
 
-      // Reception buttons — UNIQUEMENT lorsque l'admin a marqué la commande "Livrée"
+      // Reception buttons — disponibles dès que l'admin marque "En livraison" ou "Livrée"
+      // - "En livraison" : le client peut déjà confirmer qu'il a reçu (passe en "Reçue")
+      // - "Livrée" : 1ʳᵉ confirmation déjà donnée par l'admin, on attend celle du client
       var receptionButtons = "";
-      if(o.status === "Livrée"){
+      var noticeBlock = "";
+      if(o.status === "En livraison" || o.status === "Livrée"){
+        if(o.status === "Livrée"){
+          noticeBlock = '<div class="mo-notice mo-notice-ok">✓ L\'administrateur a confirmé la livraison. En attente de votre confirmation de réception.</div>';
+        }
         receptionButtons =
           '<button class="mo-btn mo-btn-ok" data-act="recv" data-id="'+esc(o.id)+'">✓ Valider la réception</button>'+
           '<button class="mo-btn mo-btn-warn" data-act="not" data-id="'+esc(o.id)+'">⚠ Signaler non reçu</button>';
-      } else if(["En attente","Confirmée","En livraison"].indexOf(o.status) !== -1){
-        receptionButtons =
-          '<button class="mo-btn" type="button" disabled title="Vous pourrez confirmer la réception une fois que l\'administrateur aura marqué la commande comme « Livrée »." style="background:#e5e7eb;color:#9ca3af;cursor:not-allowed;">✓ Valider la réception (en attente de livraison)</button>';
+      } else if(["En attente","Confirmée"].indexOf(o.status) !== -1){
+        noticeBlock = '<div class="mo-notice">⏳ Veuillez patienter — vous pourrez confirmer la réception dès que l\'administrateur aura mis votre commande « En livraison ».</div>';
       }
 
       // Cancel block — visible while the cancel window is still open OR the order is still cancellable
       var cancelBlock = "";
       if(o.cancel_until && (o.status === "En attente" || o.status === "Confirmée")){
-        var dl = new Date((o.cancel_until.indexOf("T")!==-1?o.cancel_until:o.cancel_until+"Z")).getTime();
+        var dlDate = parseServerDate(o.cancel_until);
+        var dl = dlDate ? dlDate.getTime() : 0;
         var remaining = dl - Date.now();
         if(remaining > 0){
           cancelBlock =
             '<div class="mo-countdown" data-order-id="'+esc(o.id)+'" data-cancel-until="'+esc(o.cancel_until)+'">'+
               '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>'+
-              '<span class="cd-label">Annulation possible pendant encore '+fmtRemaining(remaining)+'</span>'+
+              '<span class="cd-label">Chronomètre — annulation possible pendant encore '+fmtRemaining(remaining)+'</span>'+
               '<button class="mo-btn mo-btn-warn" data-act="cancel" data-id="'+esc(o.id)+'" style="margin-left:auto">Annuler la commande</button>'+
             '</div>';
         } else {
@@ -219,7 +235,7 @@ body { margin:0; min-height:100vh; background:linear-gradient(135deg,#fff7ef,#f3
           '<div class="mo-detail"><b>Zone de livraison</b><span>'+esc(o.delivery_zone||"—")+'</span></div>'+
           '<div class="mo-detail"><b>Statut</b><span>'+esc(o.status)+'</span></div>'+
         '</div>'+
-        cancelBlock + flag + actions +
+        cancelBlock + noticeBlock + flag + actions +
       '</div>';
     }).join("");
     list.querySelectorAll(".mo-btn:not([disabled])").forEach(function(btn){
